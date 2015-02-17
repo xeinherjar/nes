@@ -2,6 +2,7 @@
   
   'use strict';
 
+var nes = nes || {};
   var cpu = {};
 
   /* REGISTERS */
@@ -34,6 +35,10 @@
    *     s  v     b  d  i  z  c
    *     c:carry, z:zero, i:interupts, d:decimal
    *     b:break,       , v:overflow,  s:sign
+   *
+   *     Check if bit set  
+   *     (byte>>bit)&1
+   *     233:11101001 : (233>>2)&1 = 0
    * */
   cpu.flags = 0;
 

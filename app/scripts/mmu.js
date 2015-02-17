@@ -18,45 +18,46 @@
 
 (function() {
 
-  'use strict';
+'use strict';
 
-  var memory = {};
+var memory = {};
 
-  var mBuffer = new ArrayBuffer(0xFFFF);
-  memory.ram  = new Uint8Array(mBuffer); 
-
-
-  memory.read = function(address) {
-    /* Mirror of lower byte range */
-    if (address < 0x2000) {
-      return memory.ram[address & 0x7FF];
-    } else if (address < 0x3FFF) {
-    /* Mirror of 0x2000 - 0x2007 */ 
-      return memory.ram[0x2000 + (address & 0x7)]; 
-    } else {
-    /* Everything else */ 
-      return ram[address];
-    }
-  };
-
-  memory.write = function(address, value) {
-    /* Mirror of lower byte range */
-    if (address < 0x2000) {
-      memory.ram[address & 0x7FF] = (value & 0xFF);
-    } else if (address < 0x3FFFF) {
-    /* Mirror of 0x2000 - 0x2007 */ 
-      memory.ram[0x2000 + (address & 0x7)] = (value & 0xFF);
-    } else {
-    /* Everything else */ 
-      memory.ram[address] = (value & 0xFF);
-    }
-  };
+var mBuffer = new ArrayBuffer(0xFFFF);
+memory.ram  = new Uint8Array(mBuffer); 
 
 
-  memory.loadRom = function(data) {
-  /* 0x8000 - 0xFFFF */ 
-  };
+memory.read = function(address) {
+  /* Mirror of lower byte range */
+  if (address < 0x2000) {
+    return memory.ram[address & 0x7FF];
+  } else if (address < 0x3FFF) {
+  /* Mirror of 0x2000 - 0x2007 */ 
+    return memory.ram[0x2000 + (address & 0x7)]; 
+  } else {
+  /* Everything else */ 
+    return ram[address];
+  }
+};
 
-  window.nes.memory = memory;
+memory.write = function(address, value) {
+  /* Mirror of lower byte range */
+  if (address < 0x2000) {
+    memory.ram[address & 0x7FF] = (value & 0xFF);
+  } else if (address < 0x3FFFF) {
+  /* Mirror of 0x2000 - 0x2007 */ 
+    memory.ram[0x2000 + (address & 0x7)] = (value & 0xFF);
+  } else {
+  /* Everything else */ 
+    memory.ram[address] = (value & 0xFF);
+  }
+};
+
+
+memory.loadRom = function(data) {
+/* 0x8000 - 0xFFFF */ 
+};
+
+window.nes = window.nes || {};
+window.nes.memory = memory;
 
 }());
