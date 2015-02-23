@@ -13,7 +13,9 @@ rom.get.onload = function(e) {
 };
 
 rom.load = function() {
-  rom.get.open('GET', 'roms/nestest.nes', true);
+  //rom.get.open('GET', 'roms/nestest.nes', true);
+  rom.get.open('GET', 'roms/IceHockey.nes', true);
+  //rom.get.open('GET', 'roms/METROID.nes', true);
   rom.get.responseType = 'arraybuffer';
   rom.get.send(null);
 };
@@ -50,7 +52,7 @@ rom.parse = function() {
   header.chrPageCount = rom.rawData[5];
   header.flag06       = rom.rawData[6];
   header.flag07       = rom.rawData[7];
-  header.prgRAM       = rom.rawData[8] || 1; 
+  header.prgRAM       = rom.rawData[8] || 1;
   header.format       = rom.rawData[9]; // 0: NTSC, 1: PAL
   header.mapper       = (header.flag07 & 0xF0) |
                         ((header.flag06 & 0xF0) >> 4);
