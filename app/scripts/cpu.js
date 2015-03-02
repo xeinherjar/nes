@@ -269,6 +269,17 @@
     cpu.pc = address;
   };
 
+  var JSR = function(address) {
+  // JSR          JSR Jump to new location saving return address           JSR
+  // Operation:  PC + 2 toS, (PC + 1) -> PCL               S Z C I D V
+  //                         (PC + 2) -> PCH               _ _ _ _ _ _
+    var pc = cpu.pc + 2;
+    cpu.push((pc >> 8) & 0xFF); // high byte
+    cpu.push(pc & 0xFF);        // low byte
+
+    cpu.pc = address;
+  };
+
   var STX = function(address) {
   // STX                    STX Store index X in memory                    STX
   // Operation: X -> M                                     S Z C I D V
@@ -303,11 +314,14 @@
 
   cpu.step = function() {
     cpu.op = nes.memory.read(cpu.pc);
-    console.log('PC: 0x' + cpu.pc.toString(16));
-    console.log("0x" + cpu.op.toString(16));
+    console.log('' + cpu.pc.toString(16), 
+                ' ' + cpu.op.toString(16));
 
    // JSPerf says switch is 66% faster than a map
    switch (cpu.op) {
+    case 0x20:
+      JSR(absolute());
+      break;
     case 0x4C:
       JMP(absolute());
       break;
