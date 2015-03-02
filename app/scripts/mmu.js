@@ -35,7 +35,7 @@ memory.read = function(address) {
     return memory.ram[0x2000 + (address & 0x7)];
   } else {
     /* Everything else */
-    return ram[address];
+    return memory.ram[address];
   }
 };
 
@@ -62,7 +62,7 @@ memory.loadRom = function(data) {
       for (var i = 0; i < data.length; i++) {
         memory.ram[0x8000 + i] = data[i];
       }
-      if (data.length === 0x8000) {
+      if (data.length < 0x8000) {
         console.log("Mapper 0: Mirroring");
         for (var i = 0; i < data.length; i++) {
           memory.ram[0xC000 + i] = data[i];
