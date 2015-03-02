@@ -49,7 +49,7 @@
       S = 7;
 
   var getFlag = function(mask) {
-    return (cpu.flags >> mask) & 1; 
+    return (cpu.flags >> mask) & 1;
   };
 
   var clearFlagBit = function(mask) {
@@ -66,14 +66,14 @@
     switch(flag) {
       case C:
         if (arg1 > 255 || arg1 <= 0) {
-          setFlagBit(C); 
+          setFlagBit(C);
         } else {
           clearFlagBit(C);
         }
         break;
 
       case Z:
-        if (arg1 === 0) {
+        if ((arg1 & 0xFF) === 0) {
           setFlagBit(Z);
         } else {
           clearFlagBit(Z);
@@ -83,7 +83,7 @@
       case V:
         var v1 = (arg1 >> 7) & 1;
         var v2 = (arg2 >> 7) & 1;
-        var r  = (arg3 >> 7) & 1;
+        var r  = ((arg3 & 0xFF) >> 7) & 1;
 
         if ((r === v1) || (r === v2)) {
           clearFlagBit(V);
@@ -92,12 +92,12 @@
         }
         break;
 
-      case N:
-        var n = (arg1 >> 7) & 1;
+      case S:
+        var n = ((arg1 & 0xFF) >> 7) & 1;
         if (n) {
-          setFlagBit(N);
+          setFlagBit(S);
         } else {
-          clearFlagBit(N);
+          clearFlagBit(S);
         }
         break;
     }
@@ -222,7 +222,14 @@
     var memValue = read(address);
     var result   = memValue + cpu.accumulator + getFlag(C);
 
-    
+    testAndSetFlag(N, result);
+    testAndSetFlag(Z, result);
+    testAndSetFlag(C, result);
+    testAndSetFlag(V, memValue, cpu.accumulator, result);
+
+    write('accumulator', result & 0xFF);
+    cpu.pc += OP_BYTES[cpu.op];
+
   };
 
   var AND = function(address) {
@@ -240,10 +247,35 @@
   var BEQ = function(address) {
   };
 
+  var LDX = function(address) {
+  // LDX                   LDX Load index X with memory                    LDX
+  // Operation:  M -> X                                    S Z C I D V
+  //                                                       / / _ _ _ _
+    var memValue = read(address);
+
+    testAndSetFlag(Z, memValue);
+    testAndSetFlag(S, memValue);
+
+    cpu.regX = memValue & 0xFF;
+    cpu.pc += OP_BYTES[cpu.op];
+
+  };
 
 
   var JMP = function(address) {
+  // JMP                     JMP Jump to new location                      JMP
+  // Operation:  (PC + 1) -> PCL                           S Z C I D V
+  //             (PC + 2) -> PCH                           _ _ _ _ _ _
     cpu.pc = address;
+  };
+
+  var STX = function(address) {
+  // STX                    STX Store index X in memory                    STX
+  // Operation: X -> M                                     S Z C I D V
+  //                                                       _ _ _ _ _ _
+    write(address, cpu.regX);
+    cpu.pc += OP_BYTES[cpu.op];
+
   };
 
 
@@ -270,17 +302,24 @@
   ];
 
   cpu.step = function() {
-    var op = nes.memory.read(cpu.pc);
-    console.log("0x" + op.toString(16));
+    cpu.op = nes.memory.read(cpu.pc);
+    console.log('PC: 0x' + cpu.pc.toString(16));
+    console.log("0x" + cpu.op.toString(16));
 
    // JSPerf says switch is 66% faster than a map
-   switch (op) {
+   switch (cpu.op) {
     case 0x4C:
       JMP(absolute());
       break;
+    case 0x86:
+      STX(zeroPage());
+      break;
+    case 0xA2:
+      LDX(immediate());
+      break;
     default:
-      console.log('UKN OP: ' + '0x' + op.toString(16));
-      console.log('Bytes : ' + OP_BYTES[op]);
+      console.log('UKN OP: ' + '0x' + cpu.op.toString(16));
+      console.log('Bytes : ' + OP_BYTES[cpu.op]);
    }
   };
 

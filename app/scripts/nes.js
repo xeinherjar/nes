@@ -3,7 +3,7 @@ console.log('Power up');
 nes.rom.load();
 setTimeout(nes.rom.parse, 1000);
 setTimeout(function() {
- nes.memory.loadRom(nes.rom.rawData);
+ nes.memory.loadRom(nes.rom.prgData);
 }, 2000);
 
 console.log('Init CPU');
