@@ -286,7 +286,7 @@
 
   // Bit 6 and 7 are transferred to the status register.   S Z C I D V
   // If the result of A & M is zero then Z = 1, otherwise M7 / _ _ _ M6
-    var memValue = read(address); 
+    var memValue = read(address);
     var result   = cpu.accumulator & memValue;
 
     var v = (result >> 6) & 1;
@@ -307,6 +307,18 @@
   //                                                       _ _ _ _ _ _
     var value = address;
     if (!getFlag(Z)) {
+      cpu.pc += toSignedInt(value);
+    }
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var BVC = function(address) {
+  // BVC                    BVC Branch on overflow clear                   BVC
+  // Operation:  Branch on V = 0                           S Z C I D V
+  //                                                       _ _ _ _ _ _
+    var value = address;
+    if (!getFlag(V)) {
       cpu.pc += toSignedInt(value);
     }
 
@@ -463,6 +475,9 @@
       break;
     case 0x4C:
       JMP(absolute());
+      break;
+    case 0x50:
+      BVC(relative());
       break;
     case 0x70:
       BVS(relative());
