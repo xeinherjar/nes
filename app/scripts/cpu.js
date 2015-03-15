@@ -369,6 +369,20 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var CMP = function(address) {
+  // CMP                CMP Compare memory and accumulator                 CMP
+  // Operation:  A - M                                     S Z C I D V
+  //                                                       / / / _ _ _
+    var memValue = read(address);
+
+    if (cpu.accumulator >= memValue) { setFlagBit(C); } else { clearFlagBit(C); }
+    if (cpu.accumulator === memValue) { setFlagBit(Z); } else { clearFlagBit(W); }
+
+    testAndSetFlag(S, memValue);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var LDA = function(address) {
     var memValue = read(address);
 
@@ -594,6 +608,9 @@
       break;
     case 0xB0:
       BCS(relative());
+      break;
+    case 0xC9:
+      CMP(immediate());
       break;
     case 0xD0:
       BNE(relative());
