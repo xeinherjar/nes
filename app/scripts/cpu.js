@@ -313,6 +313,18 @@
 
   };
 
+  var BMI = function(address) {
+  // BMI                    BMI Branch on result minus                     BMI
+  // Operation:  Branch on N = 1                           S Z C I D V
+  //                                                       _ _ _ _ _ _
+    var value = address;
+    if (getFlag(S)) {
+      cpu.pc += toSignedInt(value);
+    }
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var BNE = function(address) {
   // BNE                   BNE Branch on result not zero                   BNE
   // Operation:  Branch on Z = 0                           S Z C I D V
@@ -415,7 +427,6 @@
 
   };
 
-
   var JMP = function(address) {
   // JMP                     JMP Jump to new location                      JMP
   // Operation:  (PC + 1) -> PCL                           S Z C I D V
@@ -444,7 +455,7 @@
 
   var PHA = function() {
   // PHA                   PHA Push accumulator on stack                   PHA
-  // Operation:  A toS                                     N Z C I D V
+  // Operation:  A toS                                     S Z C I D V
   //                                                       _ _ _ _ _ _
     cpu.push(cpu.accumulator);
     cpu.pc += OP_BYTES[cpu.op];
@@ -474,7 +485,7 @@
 
   var PLP = function() {
   // PLP               PLP Pull processor status from stack                PLA
-  // Operation:  P fromS                                   N Z C I D V
+  // Operation:  P fromS                                   S Z C I D V
   //                                                       From Stack
     cpu.flags = cpu.pull();
     clearFlagBit(4);
@@ -506,7 +517,7 @@
 
   var SED = function() {
   // SED                       SED Set decimal mode                        SED
-  //                                                       N Z C I D V
+  //                                                       S Z C I D V
   // Operation:  1 -> D                                    _ _ _ _ 1 _
     setFlagBit(D);
 
@@ -598,6 +609,9 @@
       break;
     case 0x29:
       AND(immediate());
+      break;
+    case 0x30:
+      BMI(relative());
       break;
     case 0x38:
       SEC();
