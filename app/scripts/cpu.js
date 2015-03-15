@@ -318,7 +318,7 @@
   // Operation:  Branch on S = 0                           S Z C I D V
   //                                                       _ _ _ _ _ _
     var value = address;
-    if (getFlag(S)) {
+    if (!getFlag(S)) {
       cpu.pc += toSignedInt(value);
     }
 
@@ -408,6 +408,16 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var RTS = function() {
+
+    var low  = cpu.pull();
+    var high = cpu.pull();
+    var word = (high << 8) | low;
+
+    cpu.pc = word;
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var SEC = function() {
   // SEC                        SEC Set carry flag                         SEC
   // Operation:  1 -> C                                    S Z C I D V
@@ -493,6 +503,9 @@
       break;
     case 0x50:
       BVC(relative());
+      break;
+    case 0x60:
+      RTS();
       break;
     case 0x70:
       BVS(relative());
