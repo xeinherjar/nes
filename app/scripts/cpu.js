@@ -110,6 +110,12 @@
 
 
   /* HELPERS */
+  var toSignedInt = function(n) {
+    var halfN = 127;
+    var num = halfN * 2;
+    return (n + halfN) % num - halfN;
+  };
+
   cpu.getCurrentByte = function() {
     return nes.memory.read(cpu.pc);
   };
@@ -217,12 +223,12 @@
 
   var ADC = function(address) {
   // ADC               Add memory to accumulator with carry                ADC
-  // Operation:  A + M + C -> A, C                         N Z C I D V
+  // Operation:  A + M + C -> A, C                         S Z C I D V
   //                                                       / / / _ _ /
     var memValue = read(address);
     var result   = memValue + cpu.accumulator + getFlag(C);
 
-    testAndSetFlag(N, result);
+    testAndSetFlag(S, result);
     testAndSetFlag(Z, result);
     testAndSetFlag(C, result);
     testAndSetFlag(V, memValue, cpu.accumulator, result);
@@ -239,12 +245,102 @@
   };
 
   var BCC = function(address) {
+  // BCC                     BCC Branch on Carry Clear                     BCC
+  //                                                       S Z C I D V
+  // Operation:  Branch on C = 0                           _ _ _ _ _ _
+    var value = address;
+    if (!getFlag(C)) {
+      cpu.pc += toSignedInt(value);
+    }
+
+    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var BCS = function(address) {
+  //  BCS                      BCS Branch on carry set                      BCS
+  // Operation:  Branch on C = 1                           S Z C I D V
+  //                                                       _ _ _ _ _ _
+    var value = address;
+    if (getFlag(C)) {
+      cpu.pc += toSignedInt(value);
+    }
+
+    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var BEQ = function(address) {
+  // BEQ                    BEQ Branch on result zero                      BEQ
+  //                                                       S Z C I D V
+  // Operation:  Branch on Z = 1                           _ _ _ _ _ _
+    var value = address;
+    if (getFlag(Z)) {
+      cpu.pc += toSignedInt(value);
+    }
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var BIT = function(address) {
+  // BIT             BIT Test bits in memory with accumulator              BIT
+  // Operation:  A & M, M7 -> S, M6 -> V
+
+  // Bit 6 and 7 are transferred to the status register.   S Z C I D V
+  // If the result of A & M is zero then Z = 1, otherwise M7 / _ _ _ M6
+    var memValue = read(address); 
+    var result   = cpu.accumulator & memValue;
+
+    var v = (result >> 6) & 1;
+    if (v) { setFlagBit(V); } else { clearFlagBit(V); }
+
+    var s = (result >> 7) & 1;
+    if (s) { setFlagBit(S); } else { clearFlagBit(S); }
+
+    testAndSetFlag(Z, memValue);
+
+    cpu.pc += OP_BYTES[cpu.op];
+
+  };
+
+  var BNE = function(address) {
+  // BNE                   BNE Branch on result not zero                   BNE
+  // Operation:  Branch on Z = 0                           S Z C I D V
+  //                                                       _ _ _ _ _ _
+    var value = address;
+    if (!getFlag(Z)) {
+      cpu.pc += toSignedInt(value);
+    }
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var BVS = function(address) {
+  // BVS                    BVS Branch on overflow set                     BVS
+  // Operation:  Branch on V = 1                           S Z C I D V
+  //                                                       _ _ _ _ _ _
+    var value = address;
+    if (getFlag(V)) {
+      cpu.pc += toSignedInt(value);
+    }
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var CLC = function() {
+  // CLC                       CLC Clear carry flag                        CLC
+  // Operation:  0 -> C                                    S Z C I D V
+  //                                                       _ _ 0 _ _ _
+    clearFlagBit(C);
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var LDA = function(address) {
+    var memValue = read(address);
+
+    testAndSetFlag(Z, memValue);
+    testAndSetFlag(S, memValue);
+
+    cpu.accumulator = memValue & 0xFF;
+    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var LDX = function(address) {
@@ -280,6 +376,31 @@
     cpu.pc = address;
   };
 
+  var NOP = function() {
+  // NOP                         NOP No operation                          NOP
+  //                                                       S Z C I D V
+  // Operation:  No Operation (2 cycles)                   _ _ _ _ _ _
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var SEC = function() {
+  // SEC                        SEC Set carry flag                         SEC
+  // Operation:  1 -> C                                    S Z C I D V
+  //                                                       _ _ 1 _ _ _
+    setFlagBit(C);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var STA = function(address) {
+  // STA                  STA Store accumulator in memory                  STA
+  // Operation:  A -> M                                    S Z C I D V
+  //                                                       _ _ _ _ _ _
+    write(address, cpu.accumulator);
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var STX = function(address) {
   // STX                    STX Store index X in memory                    STX
   // Operation: X -> M                                     S Z C I D V
@@ -312,28 +433,71 @@
     2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0,
   ];
 
+  var stepCount = 1;
   cpu.step = function() {
     cpu.op = nes.memory.read(cpu.pc);
-    console.log('' + cpu.pc.toString(16), 
-                ' ' + cpu.op.toString(16));
+    console.log(stepCount + ': ' +
+                cpu.pc.toString(16) +
+                ' OP: ' + cpu.op.toString(16) +
+                ' A: ' + cpu.accumulator.toString(16) +
+                ' X: ' + cpu.regX.toString(16) +
+                ' Y: ' + cpu.regY.toString(16) +
+                ' P: ' + cpu.flags.toString(16) +
+                ' SP: ' + cpu.sp.toString(16)
+    );
+    stepCount += 1;
 
    // JSPerf says switch is 66% faster than a map
    switch (cpu.op) {
+    case 0x18:
+      CLC();
+      break;
     case 0x20:
       JSR(absolute());
+      break;
+    case 0x24:
+      BIT(zeroPage());
+      break;
+    case 0x38:
+      SEC();
       break;
     case 0x4C:
       JMP(absolute());
       break;
+    case 0x70:
+      BVS(relative());
+      break;
+    case 0x85:
+      STA(zeroPage());
+      break;
     case 0x86:
       STX(zeroPage());
+      break;
+    case 0x90:
+      BCC(relative());
       break;
     case 0xA2:
       LDX(immediate());
       break;
+    case 0xA9:
+      LDA(immediate());
+      break;
+    case 0xB0:
+      BCS(relative());
+      break;
+    case 0xD0:
+      BNE(relative());
+      break;
+    case 0xEA:
+      NOP();
+      break;
+    case 0xF0:
+      BEQ(relative());
+      break;
     default:
       console.log('UKN OP: ' + '0x' + cpu.op.toString(16));
       console.log('Bytes : ' + OP_BYTES[cpu.op]);
+      throw new Error('UKN OP!');
    }
   };
 
