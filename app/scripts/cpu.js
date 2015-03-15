@@ -409,7 +409,9 @@
   };
 
   var RTS = function() {
-
+  // RTS                    RTS Return from subroutine                     RTS
+  //                                                       S Z C I D V
+  // Operation:  PC fromS, PC + 1 -> PC                    _ _ _ _ _ _
     var low  = cpu.pull();
     var high = cpu.pull();
     var word = (high << 8) | low;
@@ -423,6 +425,19 @@
   // Operation:  1 -> C                                    S Z C I D V
   //                                                       _ _ 1 _ _ _
     setFlagBit(C);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var SED = function() {
+
+  };
+
+  var SEI = function() {
+  // SEI                 SEI Set interrupt disable status                  SED
+  //                                                       S Z C I D V
+  // Operation:  1 -> I                                    _ _ _ 1 _ _
+    setFlagBit(I);
 
     cpu.pc += OP_BYTES[cpu.op];
   };
@@ -509,6 +524,9 @@
       break;
     case 0x70:
       BVS(relative());
+      break;
+    case 0x78:
+      SEI();
       break;
     case 0x85:
       STA(zeroPage());
