@@ -239,6 +239,18 @@
   };
 
   var AND = function(address) {
+  // AND                  "AND" memory with accumulator                    AND
+  // Operation:  A & M -> A                                S Z C I D V
+  //                                                       / / _ _ _ _
+    var memValue = read(address);
+    var result   = memValue & cpu.accumulator;
+
+    testAndSetFlag(S, result);
+    testAndSetFlag(Z, result);
+
+    write('accumulator', result);
+
+    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var ASL = function(address) {
@@ -412,7 +424,21 @@
   // PHP                 PHP Push processor status on stack                PHP
   // Operation:  P toS                                     S Z C I D V
   //                                                       _ _ _ _ _ _
-    cpu.push(cpu.flags);
+    setFlagBit(5); // Bit 5 is not used but should always be 1.
+    cpu.push(cpu.flags | 0x10); // set break flag on pushed flag
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var PLA = function() {
+  // PLA                 PLA Pull accumulator from stack                   PLA
+  // Operation:  A fromS                                   S Z C I D V
+  //                                                       / / _ _ _ _
+    var result = cpu.pull();
+    testAndSetFlag(Z, result);
+    testAndSetFlag(S, result);
+
+    write('accumulator', result);
 
     cpu.pc += OP_BYTES[cpu.op];
   };
@@ -527,6 +553,9 @@
     case 0x24:
       BIT(zeroPage());
       break;
+    case 0x29:
+      AND(immediate());
+      break;
     case 0x38:
       SEC();
       break;
@@ -538,6 +567,9 @@
       break;
     case 0x60:
       RTS();
+      break;
+    case 0x68:
+      PLA();
       break;
     case 0x70:
       BVS(relative());
