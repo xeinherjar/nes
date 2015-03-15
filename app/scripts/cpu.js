@@ -454,7 +454,6 @@
   // PHP                 PHP Push processor status on stack                PHP
   // Operation:  P toS                                     S Z C I D V
   //                                                       _ _ _ _ _ _
-    setFlagBit(5); // Bit 5 is not used but should always be 1.
     cpu.push(cpu.flags | 0x10); // set break flag on pushed flag
 
     cpu.pc += OP_BYTES[cpu.op];
@@ -474,7 +473,14 @@
   };
 
   var PLP = function() {
+  // PLP               PLP Pull processor status from stack                PLA
+  // Operation:  P fromS                                   N Z C I D V
+  //                                                       From Stack
+    cpu.flags = cpu.pull();
+    clearFlagBit(4);
+    setFlagBit(5); // Should alwasy be set
 
+    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var RTS = function() {
@@ -586,6 +592,9 @@
       break;
     case 0x24:
       BIT(zeroPage());
+      break;
+    case 0x28:
+      PLP();
       break;
     case 0x29:
       AND(immediate());
