@@ -422,15 +422,20 @@
 
   var SEC = function() {
   // SEC                        SEC Set carry flag                         SEC
-  // Operation:  1 -> C                                    S Z C I D V
-  //                                                       _ _ 1 _ _ _
+  //                                                       S Z C I D V
+  // Operation:  1 -> C                                    _ _ 1 _ _ _
     setFlagBit(C);
 
     cpu.pc += OP_BYTES[cpu.op];
   };
 
   var SED = function() {
+  // SED                       SED Set decimal mode                        SED
+  //                                                       N Z C I D V
+  // Operation:  1 -> D                                    _ _ _ _ 1 _
+    setFlagBit(D);
 
+    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var SEI = function() {
@@ -554,6 +559,9 @@
       break;
     case 0xF0:
       BEQ(relative());
+      break;
+    case 0xF8:
+      SED();
       break;
     default:
       console.log('UKN OP: ' + '0x' + cpu.op.toString(16));
