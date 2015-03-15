@@ -408,6 +408,15 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var PHP = function() {
+  // PHP                 PHP Push processor status on stack                PHP
+  // Operation:  P toS                                     S Z C I D V
+  //                                                       _ _ _ _ _ _
+    cpu.push(cpu.flags);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var RTS = function() {
   // RTS                    RTS Return from subroutine                     RTS
   //                                                       S Z C I D V
@@ -503,6 +512,9 @@
 
    // JSPerf says switch is 66% faster than a map
    switch (cpu.op) {
+    case 0x08:
+      PHP();
+      break;
     case 0x10:
       BPL(relative());
       break;
