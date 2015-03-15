@@ -369,6 +369,14 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var CLD = function() {
+  // CLD                      CLD Clear decimal mode                       CLD
+  // Operation:  0 -> D                                    S A C I D V
+  //                                                       _ _ _ _ 0 _
+    clearFlagBit(D);
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var CMP = function(address) {
   // CMP                CMP Compare memory and accumulator                 CMP
   // Operation:  A - M                                     S Z C I D V
@@ -434,6 +442,14 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var PHA = function() {
+  // PHA                   PHA Push accumulator on stack                   PHA
+  // Operation:  A toS                                     N Z C I D V
+  //                                                       _ _ _ _ _ _
+    cpu.push(cpu.accumulator);
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var PHP = function() {
   // PHP                 PHP Push processor status on stack                PHP
   // Operation:  P toS                                     S Z C I D V
@@ -455,6 +471,10 @@
     write('accumulator', result);
 
     cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var PLP = function() {
+
   };
 
   var RTS = function() {
@@ -573,6 +593,9 @@
     case 0x38:
       SEC();
       break;
+    case 0x48:
+      PHA();
+      break;
     case 0x4C:
       JMP(absolute());
       break;
@@ -614,6 +637,9 @@
       break;
     case 0xD0:
       BNE(relative());
+      break;
+    case 0xD8:
+      CLD();
       break;
     case 0xEA:
       NOP();
