@@ -313,6 +313,18 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var BPL = function(address) {
+  // BPL                     BPL Branch on result plus                     BPL
+  // Operation:  Branch on S = 0                           S Z C I D V
+  //                                                       _ _ _ _ _ _
+    var value = address;
+    if (getFlag(S)) {
+      cpu.pc += toSignedInt(value);
+    }
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var BVC = function(address) {
   // BVC                    BVC Branch on overflow clear                   BVC
   // Operation:  Branch on V = 0                           S Z C I D V
@@ -461,6 +473,9 @@
 
    // JSPerf says switch is 66% faster than a map
    switch (cpu.op) {
+    case 0x10:
+      BPL(relative());
+      break;
     case 0x18:
       CLC();
       break;
