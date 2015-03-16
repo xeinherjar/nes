@@ -410,6 +410,20 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var CPX = function(address) {
+  // CPX                  CPX Compare memory and index X                   CPX
+  // Operation:  X - M                                    S Z C I D V
+  //                                                      / / / _ _ _
+    var memValue = read(address);
+
+    if (cpu.regX >= memValue) { setFlagBit(C); } else { clearFlagBit(C); }
+    if (cpu.regX === memValue) { setFlagBit(Z); } else { clearFlagBit(Z); }
+
+    testAndSetFlag(S, cpu.regX - memValue);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var CPY = function(address) {
   // CPY                  CPY Compare memory and index Y                   CPY
   // Operation:  Y - M                                    S Z C I D V
@@ -744,6 +758,9 @@
       break;
     case 0xD8:
       CLD();
+      break;
+    case 0xE0:
+      CPX(immediate());
       break;
     case 0xEA:
       NOP();
