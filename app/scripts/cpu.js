@@ -452,9 +452,20 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var INX = function() {
+  // INX                    INX Increment Index X by one                   INX
+  // Operation:  X + 1 -> X                                S Z C I D V
+  //                                                       / / _ _ _ _
+    cpu.regX = (cpu.regX + 1) & 0xFF;
+    testAndSetFlag(Z, cpu.regX);
+    testAndSetFlag(S, cpu.regX);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var INY = function() {
   // INY                    INY Increment Index Y by one                   INY
-  // Operation:  X + 1 -> X                                S Z C I D V
+  // Operation:  Y + 1 -> Y                                S Z C I D V
   //                                                       / / _ _ _ _
     cpu.regY = (cpu.regY + 1) & 0xFF;
     testAndSetFlag(Z, cpu.regY);
@@ -801,6 +812,9 @@
       break;
     case 0xE0:
       CPX(immediate());
+      break;
+    case 0xE8:
+      INX();
       break;
     case 0xE9:
       SBC(immediate());
