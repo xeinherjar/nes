@@ -534,6 +534,23 @@
 
   };
 
+  var LSR = function(address) {
+  // LSR          LSR Shift right one bit (memory or accumulator)          LSR
+  //                  +-+-+-+-+-+-+-+-+
+  // Operation:  0 -> |7|6|5|4|3|2|1|0| -> C               S Z C I D V
+  //                  +-+-+-+-+-+-+-+-+                    0 / / _ _ _
+    var memValue = read(address);
+    var result   = memValue >> 1;
+    var c        = (memValue >> 0) & 1; 
+
+    testAndSetFlag(Z, result);
+    testAndSetFlag(S, result);
+    if (c) { setFlagBit(C); } else { clearFlagBit(C); }
+    write(address, result);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var JMP = function(address) {
   // JMP                     JMP Jump to new location                      JMP
   // Operation:  (PC + 1) -> PCL                           S Z C I D V
@@ -851,6 +868,9 @@
       break;
     case 0x49:
       EOR(immediate());
+      break;
+    case 0x4A:
+      LSR(accumulator());
       break;
     case 0x4C:
       JMP(absolute());
