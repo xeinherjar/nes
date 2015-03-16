@@ -615,6 +615,20 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var RTI = function() {
+  // RTI                    RTI Return from interrupt                      RTI
+  // Operation:  P fromS PC fromS                         S Z C I D V
+  //                                                      From Stack
+    cpu.flags = cpu.pull();
+    setFlagBit(5);
+
+    var low  = cpu.pull();
+    var high = cpu.pull();
+    var word = (high << 8) | low;
+
+    cpu.pc = word;
+  };
+
   var RTS = function() {
   // RTS                    RTS Return from subroutine                     RTS
   //                                                       S Z C I D V
@@ -829,6 +843,9 @@
     case 0x38:
       SEC();
       break;
+    case 0x40:
+      RTI();
+      break;
     case 0x48:
       PHA();
       break;
@@ -894,6 +911,12 @@
       break;
     case 0xAA:
       TAX();
+      break;
+    case 0xAD:
+      LDA(absolute());
+      break;
+    case 0xAE:
+      LDX(absolute());
       break;
     case 0xB0:
       BCS(relative());
