@@ -697,6 +697,17 @@
 
   };
 
+  var TAX = function() {
+  // TAX                TAX Transfer accumulator to index X                TAX
+  // Operation:  A -> X                                    S Z C I D V
+  //                                                       / / _ _ _ _
+    cpu.regX = cpu.accumulator;
+    testAndSetFlag(S, cpu.regX);
+    testAndSetFlag(Z, cpu.regX);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var TAY = function() {
   // TAY                TAY Transfer accumulator to index Y                TAY
   // Operation:  A -> Y                                    S Z C I D V
@@ -827,6 +838,9 @@
       break;
     case 0xA9:
       LDA(immediate());
+      break;
+    case 0xAA:
+      TAX();
       break;
     case 0xB0:
       BCS(relative());
