@@ -719,6 +719,18 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var TXA = function() {
+  // TXA                TYX Transfer index X to accumulator                TYX
+  // Operation:  X -> A                                    S Z C I D V
+  //                                                       / / _ _ _ _
+    cpu.accumulator = cpu.regX;
+    testAndSetFlag(S, cpu.accumulator);
+    testAndSetFlag(Z, cpu.accumulator);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+
   var TYA = function() {
   // TYA                TYA Transfer index Y to accumulator                TYA
   // Operation:  Y -> A                                    S Z C I D V
@@ -833,6 +845,9 @@
       break;
     case 0x88:
       DEY();
+      break;
+    case 0x8A:
+      TXA();
       break;
     case 0x90:
       BCC(relative());
