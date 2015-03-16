@@ -235,7 +235,6 @@
 
     write('accumulator', result & 0xFF);
     cpu.pc += OP_BYTES[cpu.op];
-
   };
 
   var AND = function(address) {
@@ -453,6 +452,20 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var ORA = function(address) {
+  // ORA                 ORA "OR" memory with accumulator                  ORA
+  // Operation: A | M -> A                                 N Z C I D V
+  //                                                       / / _ _ _ _
+    var memValue = read(address);
+    var result = cpu.accumulator | memValue;
+
+    testAndSetFlag(S, result);
+    testAndSetFlag(Z, result);
+
+    write('accumulator', result);
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var PHA = function() {
   // PHA                   PHA Push accumulator on stack                   PHA
   // Operation:  A toS                                     S Z C I D V
@@ -591,6 +604,9 @@
    switch (cpu.op) {
     case 0x08:
       PHP();
+      break;
+    case 0x09:
+      ORA(immediate());
       break;
     case 0x10:
       BPL(relative());
