@@ -448,6 +448,20 @@
 
   };
 
+  var LDY = function(address) {
+  // LDY                   LDY Load index Y with memory                    LDY
+  // Operation: M -> Y                                     S Z C I D V
+  //                                                       / / _ _ _ _
+    var memValue = read(address);
+
+    testAndSetFlag(Z, memValue);
+    testAndSetFlag(S, memValue);
+
+    cpu.regY = memValue & 0xFF;
+    cpu.pc += OP_BYTES[cpu.op];
+
+  };
+
   var JMP = function(address) {
   // JMP                     JMP Jump to new location                      JMP
   // Operation:  (PC + 1) -> PCL                           S Z C I D V
@@ -689,6 +703,9 @@
       break;
     case 0x90:
       BCC(relative());
+      break;
+    case 0xA0:
+      LDY(immediate());
       break;
     case 0xA2:
       LDX(immediate());
