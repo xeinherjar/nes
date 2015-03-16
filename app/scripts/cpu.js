@@ -452,6 +452,17 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var INY = function() {
+  // INY                    INY Increment Index Y by one                   INY
+  // Operation:  X + 1 -> X                                S Z C I D V
+  //                                                       / / _ _ _ _
+    cpu.regY = (cpu.regY + 1) & 0xFF;
+    testAndSetFlag(Z, cpu.regY);
+    testAndSetFlag(S, cpu.regY);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var LDA = function(address) {
     var memValue = read(address);
 
@@ -593,9 +604,10 @@
     testAndSetFlag(S, result);
     testAndSetFlag(Z, result);
 
+    // http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
     // Set V is bit 7 doesn't match
     var v1 = (cpu.accumulator >> 7) & 1;
-    var v2 = (result >> 7) & 1;
+    var v2 = (memValue >> 7) & 1;
     if (v1 !== v2) { setFlagBit(V); } else { clearFlagBit(V); }
 
     if (result >= 0 && result <= 255) {
@@ -774,6 +786,9 @@
       break;
     case 0xC0:
       CPY(immediate());
+      break;
+    case 0xC8:
+      INY();
       break;
     case 0xC9:
       CMP(immediate());
