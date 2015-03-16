@@ -253,6 +253,22 @@
   };
 
   var ASL = function(address) {
+  // ASL          ASL Shift Left One Bit (Memory or Accumulator)           ASL
+  //                  +-+-+-+-+-+-+-+-+
+  // Operation:  C <- |7|6|5|4|3|2|1|0| <- 0
+  //                  +-+-+-+-+-+-+-+-+                    S Z C I D V
+  //                                                       / / / _ _ _
+    var memValue  = read(address);
+    var result    = (memValue << 1) & 0xFF;
+    var c         = (memValue >> 7) & 1;
+
+    if (c) { setFlagBit(C); } else { clearFlagBit(C); }
+    testAndSetFlag(S, result);
+    testAndSetFlag(Z, result);
+
+    write(address, result);
+
+    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var BCC = function(address) {
@@ -541,7 +557,7 @@
   //                  +-+-+-+-+-+-+-+-+                    0 / / _ _ _
     var memValue = read(address);
     var result   = memValue >> 1;
-    var c        = (memValue >> 0) & 1; 
+    var c        = (memValue >> 0) & 1;
 
     testAndSetFlag(Z, result);
     testAndSetFlag(S, result);
@@ -835,6 +851,9 @@
       break;
     case 0x09:
       ORA(immediate());
+      break;
+    case 0x0A:
+      ASL(accumulator());
       break;
     case 0x10:
       BPL(relative());
