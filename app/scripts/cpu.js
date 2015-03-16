@@ -410,13 +410,27 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var EOR = function(address) {
+  // EOR            EOR "Exclusive-Or" memory with accumulator             EOR
+  // Operation:  A EOR M -> A                              N Z C I D V
+  //                                                       / / _ _ _ _
+    var memValue = read(address);
+    var result   = cpu.accumulator ^ memValue;
+
+    testAndSetFlag(Z, result);
+    testAndSetFlag(S, result);
+    write('accumulator', result);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var LDA = function(address) {
     var memValue = read(address);
 
     testAndSetFlag(Z, memValue);
     testAndSetFlag(S, memValue);
 
-    cpu.accumulator = memValue & 0xFF;
+    cpu.accumulator = memValue;
     cpu.pc += OP_BYTES[cpu.op];
   };
 
@@ -642,6 +656,9 @@
       break;
     case 0x48:
       PHA();
+      break;
+    case 0x49:
+      EOR(immediate());
       break;
     case 0x4C:
       JMP(absolute());
