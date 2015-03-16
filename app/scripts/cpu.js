@@ -438,6 +438,17 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var DEY = function() {
+  // DEY                    DEY Decrement Index Y by one                   DEY
+  // Operation:  Y - 1 -> Y                                S Z C I D V
+  //                                                       / / _ _ _ _
+    cpu.regY = (cpu.regY - 1) & 0xFF;
+    testAndSetFlag(Z, cpu.regY);
+    testAndSetFlag(S, cpu.regY);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var EOR = function(address) {
   // EOR            EOR "Exclusive-Or" memory with accumulator             EOR
   // Operation:  A EOR M -> A                              S Z C I D V
@@ -776,6 +787,9 @@
       break;
     case 0x86:
       STX(zeroPage());
+      break;
+    case 0x88:
+      DEY();
       break;
     case 0x90:
       BCC(relative());
