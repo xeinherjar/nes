@@ -741,6 +741,14 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var TXS = function() {
+  // TXS              TXS Transfer index X to stack pointer                TXS
+  // Operation:  X -> S                                    S Z C I D V
+  //                                                       _ _ _ _ _ _
+    cpu.sp = cpu.regX;
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
 
   var TYA = function() {
   // TYA                TYA Transfer index Y to accumulator                TYA
@@ -860,11 +868,17 @@
     case 0x8A:
       TXA();
       break;
+    case 0x8E:
+      STX(absolute());
+      break;
     case 0x90:
       BCC(relative());
       break;
     case 0x98:
       TYA();
+      break;
+    case 0x9A:
+      TXS();
       break;
     case 0xA0:
       LDY(immediate());
