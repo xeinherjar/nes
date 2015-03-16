@@ -583,6 +583,31 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var SBC = function(address) {
+  // SBC          SBC Subtract memory from accumulator with borrow         SBC
+  // Operation:  A - M - C -> A                            S Z C I D V
+  //                                                       / / / _ _ /
+    var memValue = read(address);
+    var result = cpu.accumulator - memValue - (!getFlag(C));
+
+    testAndSetFlag(S, result);
+    testAndSetFlag(Z, result);
+
+    // Set V is bit 7 doesn't match
+    var v1 = (cpu.accumulator >> 7) & 1;
+    var v2 = (result >> 7) & 1;
+    if (v1 !== v2) { setFlagBit(V); } else { clearFlagBit(V); }
+
+    if (result >= 0 && result <= 255) {
+      setFlagBit(C);
+    } else {
+      clearFlagBit(C);
+    }
+
+    write('accumulator', result);
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var SEC = function() {
   // SEC                        SEC Set carry flag                         SEC
   //                                                       S Z C I D V
@@ -761,6 +786,9 @@
       break;
     case 0xE0:
       CPX(immediate());
+      break;
+    case 0xE9:
+      SBC(immediate());
       break;
     case 0xEA:
       NOP();
