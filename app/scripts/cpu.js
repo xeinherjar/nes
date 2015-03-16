@@ -648,6 +648,26 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var ROL = function(address) {
+  // ROL          ROL Rotate one bit left (memory or accumulator)          ROL
+  //              +------------------------------+
+  //              |         M or A               |
+  //              |   +-+-+-+-+-+-+-+-+    +-+   |
+  // Operation:   +-< |7|6|5|4|3|2|1|0| <- |C| <-+         S Z C I D V
+  //                  +-+-+-+-+-+-+-+-+    +-+             / / / _ _ _
+    var memValue = read(address);
+    var result   = ((memValue << 1) | getFlag(C)) & 0xFF;
+    var c        = (memValue >> 7) & 1;
+
+    if (c) { setFlagBit(C); } else { clearFlagBit(C); }
+    testAndSetFlag(Z, result);
+    testAndSetFlag(S, result);
+
+    write(address, result);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var ROR = function(address) {
   // ROR          ROR Rotate one bit right (memory or accumulator)         ROR
   //              +------------------------------+
@@ -892,6 +912,9 @@
       break;
     case 0x29:
       AND(immediate());
+      break;
+    case 0x2A:
+      ROL(accumulator());
       break;
     case 0x30:
       BMI(relative());
