@@ -697,6 +697,17 @@
 
   };
 
+  var TAY = function() {
+  // TAY                TAY Transfer accumulator to index Y                TAY
+  // Operation:  A -> Y                                    S Z C I D V
+  //                                                       / / _ _ _ _
+    cpu.regY = cpu.accumulator;
+    testAndSetFlag(S, cpu.regY);
+    testAndSetFlag(Z, cpu.regY);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
 
 
   // EXECUTE
@@ -810,6 +821,9 @@
       break;
     case 0xA2:
       LDX(immediate());
+      break;
+    case 0xA8:
+      TAY();
       break;
     case 0xA9:
       LDA(immediate());
