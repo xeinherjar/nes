@@ -300,13 +300,13 @@
     var memValue = read(address);
     var result   = cpu.accumulator & memValue;
 
-    var v = (result >> 6) & 1;
+    var v = (memValue >> 6) & 1;
     if (v) { setFlagBit(V); } else { clearFlagBit(V); }
 
-    var s = (result >> 7) & 1;
+    var s = (memValue >> 7) & 1;
     if (s) { setFlagBit(S); } else { clearFlagBit(S); }
 
-    testAndSetFlag(Z, memValue);
+    testAndSetFlag(Z, result);
 
     cpu.pc += OP_BYTES[cpu.op];
 
@@ -388,6 +388,14 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var CLV = function() {
+  // CLV                      CLV Clear overflow flag                      CLV
+  // Operation: 0 -> V                                     N Z C I D V
+  //                                                       _ _ _ _ _ 0
+    clearFlagBit(V);
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var CMP = function(address) {
   // CMP                CMP Compare memory and accumulator                 CMP
   // Operation:  A - M                                     S Z C I D V
@@ -397,7 +405,7 @@
     if (cpu.accumulator >= memValue) { setFlagBit(C); } else { clearFlagBit(C); }
     if (cpu.accumulator === memValue) { setFlagBit(Z); } else { clearFlagBit(W); }
 
-    testAndSetFlag(S, memValue);
+    testAndSetFlag(S, cpu.accumulator - memValue);
 
     cpu.pc += OP_BYTES[cpu.op];
   };
@@ -670,6 +678,9 @@
       break;
     case 0xB0:
       BCS(relative());
+      break;
+    case 0xB8:
+      CLV();
       break;
     case 0xC9:
       CMP(immediate());
