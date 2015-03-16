@@ -233,7 +233,7 @@
     testAndSetFlag(C, result);
     testAndSetFlag(V, memValue, cpu.accumulator, result);
 
-    write('accumulator', result & 0xFF);
+    write('accumulator', result);
     cpu.pc += OP_BYTES[cpu.op];
   };
 
@@ -390,7 +390,7 @@
 
   var CLV = function() {
   // CLV                      CLV Clear overflow flag                      CLV
-  // Operation: 0 -> V                                     N Z C I D V
+  // Operation: 0 -> V                                     S Z C I D V
   //                                                       _ _ _ _ _ 0
     clearFlagBit(V);
     cpu.pc += OP_BYTES[cpu.op];
@@ -403,7 +403,7 @@
     var memValue = read(address);
 
     if (cpu.accumulator >= memValue) { setFlagBit(C); } else { clearFlagBit(C); }
-    if (cpu.accumulator === memValue) { setFlagBit(Z); } else { clearFlagBit(W); }
+    if (cpu.accumulator === memValue) { setFlagBit(Z); } else { clearFlagBit(Z); }
 
     testAndSetFlag(S, cpu.accumulator - memValue);
 
@@ -412,7 +412,7 @@
 
   var EOR = function(address) {
   // EOR            EOR "Exclusive-Or" memory with accumulator             EOR
-  // Operation:  A EOR M -> A                              N Z C I D V
+  // Operation:  A EOR M -> A                              S Z C I D V
   //                                                       / / _ _ _ _
     var memValue = read(address);
     var result   = cpu.accumulator ^ memValue;
@@ -671,6 +671,9 @@
       break;
     case 0x68:
       PLA();
+      break;
+    case 0x69:
+      ADC(immediate());
       break;
     case 0x70:
       BVS(relative());
