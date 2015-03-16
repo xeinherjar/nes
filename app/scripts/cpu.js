@@ -410,6 +410,20 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var CPY = function(address) {
+  // CPY                  CPY Compare memory and index Y                   CPY
+  // Operation:  Y - M                                    S Z C I D V
+  //                                                      / / / _ _ _
+    var memValue = read(address);
+
+    if (cpu.regY >= memValue) { setFlagBit(C); } else { clearFlagBit(C); }
+    if (cpu.regY === memValue) { setFlagBit(Z); } else { clearFlagBit(Z); }
+
+    testAndSetFlag(S, cpu.regY - memValue);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var EOR = function(address) {
   // EOR            EOR "Exclusive-Or" memory with accumulator             EOR
   // Operation:  A EOR M -> A                              S Z C I D V
@@ -718,6 +732,9 @@
       break;
     case 0xB8:
       CLV();
+      break;
+    case 0xC0:
+      CPY(immediate());
       break;
     case 0xC9:
       CMP(immediate());
