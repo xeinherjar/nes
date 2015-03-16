@@ -438,6 +438,17 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var DEX = function() {
+  // DEX                    DEX Decrement Index X by one                   DEX
+  // Operation:  X - 1 -> X                                S Z C I D V
+  //                                                       / / _ _ _ _
+    cpu.regX = (cpu.regX - 1) & 0xFF;
+    testAndSetFlag(Z, cpu.regX);
+    testAndSetFlag(S, cpu.regX);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var DEY = function() {
   // DEY                    DEY Decrement Index Y by one                   DEY
   // Operation:  Y - 1 -> Y                                S Z C I D V
@@ -817,6 +828,9 @@
       break;
     case 0xC9:
       CMP(immediate());
+      break;
+    case 0xCA:
+      DEX();
       break;
     case 0xD0:
       BNE(relative());
