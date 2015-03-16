@@ -719,6 +719,17 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var TSX = function() {
+  // TSX              TSX Transfer stack pointer to index X                TSX
+  // Operation:  S -> X                                    S Z C I D V
+  //                                                       / / _ _ _ _
+    cpu.regX = cpu.sp;
+    testAndSetFlag(S, cpu.regX);
+    testAndSetFlag(Z, cpu.regX);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var TXA = function() {
   // TXA                TYX Transfer index X to accumulator                TYX
   // Operation:  X -> A                                    S Z C I D V
@@ -875,6 +886,9 @@
       break;
     case 0xB8:
       CLV();
+      break;
+    case 0xBA:
+      TSX();
       break;
     case 0xC0:
       CPY(immediate());
