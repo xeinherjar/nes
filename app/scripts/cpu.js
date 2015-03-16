@@ -648,6 +648,26 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var ROR = function(address) {
+  // ROR          ROR Rotate one bit right (memory or accumulator)         ROR
+  //              +------------------------------+
+  //              |                              |
+  //              |   +-+    +-+-+-+-+-+-+-+-+   |
+  // Operation:   +-> |C| -> |7|6|5|4|3|2|1|0| >-+         S Z C I D V
+  //                  +-+    +-+-+-+-+-+-+-+-+             / / / _ _ _
+    var memValue = read(address);
+    var result   = ((memValue >> 1) | ((getFlag(C) << 7) & 0xFF));
+    var c        = (memValue >> 0) & 1;
+
+    if (c) { setFlagBit(C); } else { clearFlagBit(C); }
+    testAndSetFlag(Z, result);
+    testAndSetFlag(S, result);
+
+    write(address, result);
+
+    cpu.pc +=OP_BYTES[cpu.op];
+  };
+
   var RTI = function() {
   // RTI                    RTI Return from interrupt                      RTI
   // Operation:  P fromS PC fromS                         S Z C I D V
@@ -905,6 +925,9 @@
       break;
     case 0x69:
       ADC(immediate());
+      break;
+    case 0x6A:
+      ROR(accumulator());
       break;
     case 0x70:
       BVS(relative());
