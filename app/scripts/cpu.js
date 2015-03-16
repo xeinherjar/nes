@@ -719,6 +719,16 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var TYA = function() {
+  // TYA                TYA Transfer index Y to accumulator                TYA
+  // Operation:  Y -> A                                    S Z C I D V
+  //                                                       / / _ _ _ _
+    cpu.accumulator = cpu.regY;
+    testAndSetFlag(S, cpu.accumulator);
+    testAndSetFlag(Z, cpu.accumulator);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
 
 
   // EXECUTE
@@ -826,6 +836,9 @@
       break;
     case 0x90:
       BCC(relative());
+      break;
+    case 0x98:
+      TYA();
       break;
     case 0xA0:
       LDY(immediate());
