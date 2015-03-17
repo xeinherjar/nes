@@ -951,6 +951,12 @@
     case 0x0A:
       ASL(accumulator());
       break;
+    case 0x0D:
+      ORA(absolute());
+      break;
+    case 0x0E:
+      ASL(absolute());
+      break;
     case 0x10:
       BPL(relative());
       break;
@@ -980,6 +986,15 @@
       break;
     case 0x2A:
       ROL(accumulator());
+      break;
+    case 0x2C:
+      BIT(absolute());
+      break;
+    case 0x2D:
+      AND(absolute());
+      break;
+    case 0x2E:
+      ROL(absolute());
       break;
     case 0x30:
       BMI(relative());
@@ -1011,6 +1026,12 @@
     case 0x4C:
       JMP(absolute());
       break;
+    case 0x4D:
+      EOR(absolute());
+      break;
+    case 0x4E:
+      LSR(absolute());
+      break;
     case 0x50:
       BVC(relative());
       break;
@@ -1035,6 +1056,12 @@
     case 0x6A:
       ROR(accumulator());
       break;
+    case 0x6D:
+      ADC(absolute());
+      break;
+    case 0x6E:
+      ROR(absolute());
+      break;
     case 0x70:
       BVS(relative());
       break;
@@ -1058,6 +1085,9 @@
       break;
     case 0x8A:
       TXA();
+      break;
+    case 0x8C:
+      STY(absolute());
       break;
     case 0x8D:
       STA(absolute());
@@ -1101,6 +1131,9 @@
     case 0xAA:
       TAX();
       break;
+    case 0xAC:
+      LDY(absolute());
+      break;
     case 0xAD:
       LDA(absolute());
       break;
@@ -1140,6 +1173,15 @@
     case 0xCA:
       DEX();
       break;
+    case 0xCC:
+      CPY(absolute());
+      break;
+    case 0xCD:
+      CMP(absolute());
+      break;
+    case 0xCE:
+      DEC(absolute());
+      break;
     case 0xD0:
       BNE(relative());
       break;
@@ -1169,6 +1211,15 @@
       break;
     case 0xEA:
       NOP();
+      break;
+    case 0xEC:
+      CPX(absolute());
+      break;
+    case 0xED:
+      SBC(absolute());
+      break;
+    case 0xEE:
+      INC(absolute());
       break;
     case 0xF0:
       BEQ(relative());
