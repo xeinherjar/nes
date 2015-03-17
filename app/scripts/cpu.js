@@ -795,6 +795,14 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var STY = function(address) {
+  // STY                    STY Store index Y in memory                    STY
+  // Operation: Y -> M                                     S Z C I D V
+  //                                                       _ _ _ _ _ _
+    write(address, cpu.regY);
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var TAX = function() {
   // TAX                TAX Transfer accumulator to index X                TAX
   // Operation:  A -> X                                    S Z C I D V
@@ -984,6 +992,9 @@
     case 0x81:
       STA(indirectX());
       break;
+    case 0x84:
+      STY(zeroPage());
+      break;
     case 0x85:
       STA(zeroPage());
       break;
@@ -1019,6 +1030,9 @@
       break;
     case 0xA2:
       LDX(immediate());
+      break;
+    case 0xA4:
+      LDY(zeroPage());
       break;
     case 0xA5:
       LDA(zeroPage());
