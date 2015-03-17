@@ -897,6 +897,9 @@
 
    // JSPerf says switch is 66% faster than a map
    switch (cpu.op) {
+    case 0x01:
+      ORA(indirectX());
+      break;
     case 0x08:
       PHP();
       break;
@@ -914,6 +917,9 @@
       break;
     case 0x20:
       JSR(absolute());
+      break;
+    case 0x21:
+      AND(indirectX());
       break;
     case 0x24:
       BIT(zeroPage());
@@ -936,6 +942,9 @@
     case 0x40:
       RTI();
       break;
+    case 0x41:
+      EOR(indirectX());
+      break;
     case 0x48:
       PHA();
       break;
@@ -954,6 +963,9 @@
     case 0x60:
       RTS();
       break;
+    case 0x61:
+      ADC(indirectX());
+      break;
     case 0x68:
       PLA();
       break;
@@ -968,6 +980,9 @@
       break;
     case 0x78:
       SEI();
+      break;
+    case 0x81:
+      STA(indirectX());
       break;
     case 0x85:
       STA(zeroPage());
@@ -1035,6 +1050,9 @@
     case 0xC0:
       CPY(immediate());
       break;
+    case 0xC1:
+      CMP(indirectX());
+      break;
     case 0xC8:
       INY();
       break;
@@ -1052,6 +1070,9 @@
       break;
     case 0xE0:
       CPX(immediate());
+      break;
+    case 0xE1:
+      SBC(indirectX());
       break;
     case 0xE8:
       INX();
