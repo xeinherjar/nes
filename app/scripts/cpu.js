@@ -206,10 +206,11 @@
 
   var indirectY = function() {
     var lowAddress = cpu.getNextByte();
-    var low  = read(lowAddress);
-    var high = read(lowAddress + 1);
+    var low  = read(lowAddress & 0xFF);
+    var high = read((lowAddress + 1) & 0xFF);
     var word = (high << 8) | low;
-    return word + cpu.regY;
+
+    return (word + cpu.regY) & 0xFFFF;
   };
 
   var relative = function() {
@@ -1142,6 +1143,9 @@
       break;
     case 0xB0:
       BCS(relative());
+      break;
+    case 0xB1:
+      LDA(indirectY());
       break;
     case 0xB8:
       CLV();
