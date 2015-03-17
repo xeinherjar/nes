@@ -22,7 +22,7 @@
 
 var memory = {};
 
-var mBuffer = new ArrayBuffer(0xFFFF);
+var mBuffer = new ArrayBuffer(0xFFFF + 1);
 memory.ram  = new Uint8Array(mBuffer);
 
 

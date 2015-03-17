@@ -374,6 +374,20 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var BRK = function() {
+  // BRK                          BRK Force Break                          BRK
+  // Operation:  Forced Interrupt PC + 2 toS P toS         S Z C I D V
+  //                                                       _ _ _ 1 _ _
+    cpu.pc += 2;
+    cpu.push(cpu.pc);
+    cpu.push(cpu.flags);
+    setFlagBit(B);
+
+    var low  = read(0xFFFE);
+    var high = read(0xFFFF);
+    cpu.pc = (high << 8) | low;
+  };
+
   var BVC = function(address) {
   // BVC                    BVC Branch on overflow clear                   BVC
   // Operation:  Branch on V = 0                           S Z C I D V
@@ -921,6 +935,7 @@
   var stepCount = 1;
   cpu.step = function() {
     cpu.op = nes.memory.read(cpu.pc);
+    /*
     console.log(stepCount + ': ' +
                 cpu.pc.toString(16) +
                 ' OP: ' + cpu.op.toString(16) +
@@ -931,9 +946,12 @@
                 ' SP: ' + cpu.sp.toString(16)
     );
     stepCount += 1;
-
+    */
    // JSPerf says switch is 66% faster than a map
    switch (cpu.op) {
+    case 0x00:
+      BRK();
+      break;
     case 0x01:
       ORA(indirectX());
       break;
@@ -975,6 +993,12 @@
       break;
     case 0x19:
       ORA(absoluteY());
+      break;
+    case 0x1D:
+      ORA(absoluteX());
+      break;
+    case 0x1E:
+      ASL(absoluteX());
       break;
     case 0x20:
       JSR(absolute());
@@ -1027,6 +1051,12 @@
     case 0x39:
       AND(absoluteY());
       break;
+    case 0x3D:
+      AND(absoluteX());
+      break;
+    case 0x3E:
+      ROL(absoluteX());
+      break;
     case 0x40:
       RTI();
       break;
@@ -1071,6 +1101,12 @@
       break;
     case 0x59:
       EOR(absoluteY());
+      break;
+    case 0x5D:
+      EOR(absoluteX());
+      break;
+    case 0x5E:
+      LSR(absoluteX());
       break;
     case 0x60:
       RTS();
@@ -1119,6 +1155,12 @@
       break;
     case 0x79:
       ADC(absoluteY());
+      break;
+    case 0x7D:
+      ADC(absoluteX());
+      break;
+    case 0x7E:
+      ROR(absoluteX());
       break;
     case 0x81:
       STA(indirectX());
@@ -1170,6 +1212,9 @@
       break;
     case 0x9A:
       TXS();
+      break;
+    case 0x9D:
+      STA(absoluteX());
       break;
     case 0xA0:
       LDY(immediate());
@@ -1228,8 +1273,17 @@
     case 0xB9:
       LDA(absoluteY());
       break;
+    case 0xBD:
+      LDA(absoluteX());
+      break;
+    case 0xBE:
+      LDX(absoluteY());
+      break;
     case 0xBA:
       TSX();
+      break;
+    case 0xBC:
+      LDY(absoluteX());
       break;
     case 0xC0:
       CPY(immediate());
@@ -1282,6 +1336,12 @@
     case 0xD9:
       CMP(absoluteY());
       break;
+    case 0xDD:
+      CMP(absoluteX());
+      break;
+    case 0xDE:
+      DEC(absoluteX());
+      break;
     case 0xE0:
       CPX(immediate());
       break;
@@ -1332,6 +1392,12 @@
       break;
     case 0xF9:
       SBC(absoluteY());
+      break;
+    case 0xFD:
+      SBC(absoluteX());
+      break;
+    case 0xFE:
+      INC(absoluteX());
       break;
     default:
       console.log('UKN OP: ' + '0x' + cpu.op.toString(16));

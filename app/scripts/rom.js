@@ -13,8 +13,8 @@ rom.get.onload = function(e) {
 };
 
 rom.load = function() {
-  rom.get.open('GET', 'roms/nestest.nes', true);
-  //rom.get.open('GET', 'roms/IceHockey.nes', true);
+  //rom.get.open('GET', 'roms/nestest.nes', true);
+  rom.get.open('GET', 'roms/IceHockey.nes', true);
   //rom.get.open('GET', 'roms/METROID.nes', true);
   rom.get.responseType = 'arraybuffer';
   rom.get.send(null);
