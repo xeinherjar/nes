@@ -463,6 +463,20 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var DEC = function(address) {
+  // DEC                   DEC Decrement memory by one                     DEC
+  // Operation:  M - 1 -> M                                S Z C I D V
+  //                                                       / / _ _ _ _
+    var memValue = read(address);
+    var result   = memValue - 1;
+
+    testAndSetFlag(S, result);
+    testAndSetFlag(Z, result);
+    write(address, result);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var DEX = function() {
   // DEX                    DEX Decrement Index X by one                   DEX
   // Operation:  X - 1 -> X                                S Z C I D V
@@ -1113,6 +1127,9 @@
       break;
     case 0xC5:
       CMP(zeroPage());
+      break;
+    case 0xC6:
+      DEC(zeroPage());
       break;
     case 0xC8:
       INY();
