@@ -222,11 +222,11 @@
   };
 
   var zeroPageX = function() {
-    return (cpu.getNextByte() + cpu.regX) % 0xFF;
+    return (cpu.getNextByte() + cpu.regX) & 0xFF;
   };
 
   var zeroPageY = function() {
-    return (cpu.getNextByte() + cpu.regY) % 0xFF;
+    return (cpu.getNextByte() + cpu.regY) & 0xFF;
   };
 
   /* OPCODES */
@@ -964,6 +964,12 @@
     case 0x11:
       ORA(indirectY());
       break;
+    case 0x15:
+      ORA(zeroPageX());
+      break;
+    case 0x16:
+      ASL(zeroPageX());
+      break;
     case 0x18:
       CLC();
       break;
@@ -1009,6 +1015,12 @@
     case 0x31:
       AND(indirectY());
       break;
+    case 0x35:
+      AND(zeroPageX());
+      break;
+    case 0x36:
+      ROL(zeroPageX());
+      break;
     case 0x38:
       SEC();
       break;
@@ -1051,6 +1063,12 @@
     case 0x51:
       EOR(indirectY());
       break;
+    case 0x55:
+      EOR(zeroPageX());
+      break;
+    case 0x56:
+      LSR(zeroPageX());
+      break;
     case 0x59:
       EOR(absoluteY());
       break;
@@ -1090,6 +1108,12 @@
     case 0x71:
       ADC(indirectY());
       break;
+    case 0x75:
+      ADC(zeroPageX());
+      break;
+    case 0x76:
+      ROR(zeroPageX());
+      break;
     case 0x78:
       SEI();
       break;
@@ -1128,6 +1152,12 @@
       break;
     case 0x91:
       STA(indirectY());
+      break;
+    case 0x94:
+      STY(zeroPageX());
+      break;
+    case 0x95:
+      STA(zeroPageX());
       break;
     case 0x98:
       TYA();
@@ -1180,6 +1210,15 @@
     case 0xB1:
       LDA(indirectY());
       break;
+    case 0xB4:
+      LDY(zeroPageX());
+      break;
+    case 0xB5:
+      LDA(zeroPageX());
+      break;
+    case 0xB6:
+      LDX(zeroPageY());
+      break;
     case 0xB8:
       CLV();
       break;
@@ -1228,6 +1267,12 @@
     case 0xD1:
       CMP(indirectY());
       break;
+    case 0xD5:
+      CMP(zeroPageX());
+      break;
+    case 0xD6:
+      DEC(zeroPageX());
+      break;
     case 0xD8:
       CLD();
       break;
@@ -1272,6 +1317,12 @@
       break;
     case 0xF1:
       SBC(indirectY());
+      break;
+    case 0xF5:
+      SBC(zeroPageX());
+      break;
+    case 0xF6:
+      INC(zeroPageX());
       break;
     case 0xF8:
       SED();
