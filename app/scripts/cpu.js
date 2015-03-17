@@ -949,6 +949,9 @@
     case 0x09:
       ORA(immediate());
       break;
+    case 0x11:
+      ORA(indirectY());
+      break;
     case 0x0A:
       ASL(accumulator());
       break;
@@ -1000,6 +1003,9 @@
     case 0x30:
       BMI(relative());
       break;
+    case 0x31:
+      AND(indirectY());
+      break;
     case 0x38:
       SEC();
       break;
@@ -1036,6 +1042,9 @@
     case 0x50:
       BVC(relative());
       break;
+    case 0x51:
+      EOR(indirectY());
+      break;
     case 0x60:
       RTS();
       break;
@@ -1065,6 +1074,9 @@
       break;
     case 0x70:
       BVS(relative());
+      break;
+    case 0x71:
+      ADC(indirectY());
       break;
     case 0x78:
       SEI();
@@ -1098,6 +1110,9 @@
       break;
     case 0x90:
       BCC(relative());
+      break;
+    case 0x91:
+      STA(indirectY());
       break;
     case 0x98:
       TYA();
@@ -1189,6 +1204,9 @@
     case 0xD0:
       BNE(relative());
       break;
+    case 0xD1:
+      CMP(indirectY());
+      break;
     case 0xD8:
       CLD();
       break;
@@ -1227,6 +1245,9 @@
       break;
     case 0xF0:
       BEQ(relative());
+      break;
+    case 0xF1:
+      SBC(indirectY());
       break;
     case 0xF8:
       SED();
