@@ -499,6 +499,20 @@
     cpu.pc += OP_BYTES[cpu.op];
   };
 
+  var INC = function(address) {
+  // INC                    INC Increment memory by one                    INC
+  // Operation:  M + 1 -> M                                S Z C I D V
+  //                                                       / / _ _ _ _
+    var memValue = read(address);
+    var result = memValue + 1;
+
+    testAndSetFlag(Z, result);
+    testAndSetFlag(S, result);
+    write(address, result);
+
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
   var INX = function() {
   // INX                    INX Increment Index X by one                   INX
   // Operation:  X + 1 -> X                                S Z C I D V
@@ -908,6 +922,12 @@
     case 0x01:
       ORA(indirectX());
       break;
+    case 0x05:
+      ORA(zeroPage());
+      break;
+    case 0x06:
+      ASL(zeroPage());
+      break;
     case 0x08:
       PHP();
       break;
@@ -932,6 +952,12 @@
     case 0x24:
       BIT(zeroPage());
       break;
+    case 0x25:
+      AND(zeroPage());
+      break;
+    case 0x26:
+      ROL(zeroPage());
+      break;
     case 0x28:
       PLP();
       break;
@@ -953,6 +979,12 @@
     case 0x41:
       EOR(indirectX());
       break;
+    case 0x45:
+      EOR(zeroPage());
+      break;
+    case 0x46:
+      LSR(zeroPage());
+      break;
     case 0x48:
       PHA();
       break;
@@ -973,6 +1005,12 @@
       break;
     case 0x61:
       ADC(indirectX());
+      break;
+    case 0x65:
+      ADC(zeroPage());
+      break;
+    case 0x66:
+      ROR(zeroPage());
       break;
     case 0x68:
       PLA();
@@ -1037,6 +1075,9 @@
     case 0xA5:
       LDA(zeroPage());
       break;
+    case 0xA6:
+      LDX(zeroPage());
+      break;
     case 0xA8:
       TAY();
       break;
@@ -1067,6 +1108,12 @@
     case 0xC1:
       CMP(indirectX());
       break;
+    case 0xC4:
+      CPY(zeroPage());
+      break;
+    case 0xC5:
+      CMP(zeroPage());
+      break;
     case 0xC8:
       INY();
       break;
@@ -1087,6 +1134,15 @@
       break;
     case 0xE1:
       SBC(indirectX());
+      break;
+    case 0xE4:
+      CPX(zeroPage());
+      break;
+    case 0xE5:
+      SBC(zeroPage());
+      break;
+    case 0xE6:
+      INC(zeroPage());
       break;
     case 0xE8:
       INX();
