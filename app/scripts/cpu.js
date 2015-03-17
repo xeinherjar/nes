@@ -165,11 +165,11 @@
   };
 
   var absoluteX = function() {
-    return cpu.getNextWord() + cpu.regX;
+    return (cpu.getNextWord() + cpu.regX) & 0xFFFF;
   };
 
   var absoluteY = function() {
-    return cpu.getNextWord() + cpu.regY;
+    return (cpu.getNextWord() + cpu.regY) & 0xFFFF;
   };
 
   var immediate = function() {
@@ -949,10 +949,7 @@
     case 0x09:
       ORA(immediate());
       break;
-    case 0x11:
-      ORA(indirectY());
-      break;
-    case 0x0A:
+   case 0x0A:
       ASL(accumulator());
       break;
     case 0x0D:
@@ -964,8 +961,14 @@
     case 0x10:
       BPL(relative());
       break;
+    case 0x11:
+      ORA(indirectY());
+      break;
     case 0x18:
       CLC();
+      break;
+    case 0x19:
+      ORA(absoluteY());
       break;
     case 0x20:
       JSR(absolute());
@@ -1009,6 +1012,9 @@
     case 0x38:
       SEC();
       break;
+    case 0x39:
+      AND(absoluteY());
+      break;
     case 0x40:
       RTI();
       break;
@@ -1045,6 +1051,9 @@
     case 0x51:
       EOR(indirectY());
       break;
+    case 0x59:
+      EOR(absoluteY());
+      break;
     case 0x60:
       RTS();
       break;
@@ -1066,6 +1075,9 @@
     case 0x6A:
       ROR(accumulator());
       break;
+    case 0x6C:
+      JMP(indirect());
+      break;
     case 0x6D:
       ADC(absolute());
       break;
@@ -1080,6 +1092,9 @@
       break;
     case 0x78:
       SEI();
+      break;
+    case 0x79:
+      ADC(absoluteY());
       break;
     case 0x81:
       STA(indirectX());
@@ -1116,6 +1131,9 @@
       break;
     case 0x98:
       TYA();
+      break;
+    case 0x99:
+      STA(absoluteY());
       break;
     case 0x9A:
       TXS();
@@ -1165,6 +1183,9 @@
     case 0xB8:
       CLV();
       break;
+    case 0xB9:
+      LDA(absoluteY());
+      break;
     case 0xBA:
       TSX();
       break;
@@ -1210,6 +1231,9 @@
     case 0xD8:
       CLD();
       break;
+    case 0xD9:
+      CMP(absoluteY());
+      break;
     case 0xE0:
       CPX(immediate());
       break;
@@ -1251,6 +1275,9 @@
       break;
     case 0xF8:
       SED();
+      break;
+    case 0xF9:
+      SBC(absoluteY());
       break;
     default:
       console.log('UKN OP: ' + '0x' + cpu.op.toString(16));
