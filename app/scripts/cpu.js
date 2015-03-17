@@ -1159,6 +1159,9 @@
     case 0x95:
       STA(zeroPageX());
       break;
+    case 0x96:
+      STX(zeroPageY());
+      break;
     case 0x98:
       TYA();
       break;
