@@ -29,7 +29,7 @@ memory.ram  = new Uint8Array(mBuffer);
 memory.read = function(address) {
   /* Mirror of lower byte range */
   if (address < 0x2000) {
-    return memory.ram[address & 0x7FF];
+    return memory.ram[address & 0x07FF];
   } else if (address < 0x3FFF) {
     /* Mirror of 0x2000 - 0x2007 */
     return memory.ram[0x2000 + (address & 0x7)];
@@ -40,10 +40,11 @@ memory.read = function(address) {
 };
 
 memory.write = function(address, value) {
+  if (address === 0) { console.log('asdf', value); }
   /* Mirror of lower byte range */
   if (address < 0x2000) {
-    memory.ram[address & 0x7FF] = (value & 0xFF);
-  } else if (address < 0x3FFFF) {
+    memory.ram[address & 0x07FF] = (value & 0xFF);
+  } else if (address < 0x3FFF) {
     /* Mirror of 0x2000 - 0x2007 */
     memory.ram[0x2000 + (address & 0x7)] = (value & 0xFF);
   } else {

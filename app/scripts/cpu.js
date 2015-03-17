@@ -181,18 +181,29 @@
   // nothing to do
 
   var indirect = function() {
-    // TODO: check for page boundry
     var lowAddress = cpu.getNextWord();
     var low  = read(lowAddress);
-    var high = read(lowAddress + 1);
+
+    // Check for page boundry
+    var high;
+    if ((lowAddress & 0xFF) === 0xFF) {
+      high = read((lowAddress >> 8) << 8);
+    } else {
+      high = read(lowAddress + 1);
+    }
+
     return (high << 8) | low;
   };
 
   var indirectX = function() {
     var lowAddress = cpu.getNextByte() + cpu.regX;
-    var low  = read(lowAddress);
-    var high = read(lowAddress + 1);
-    return (high << 8) | low;
+    var low  = read(lowAddress & 0xFF);
+    var high = read((lowAddress + 1) & 0xFF);
+    var word = (high << 8) | low;
+    console.log(lowAddress, low, high, word);
+    console.log(cpu.getNextByte(), cpu.regX);
+
+    return word;
   };
 
   var indirectY = function() {
@@ -513,12 +524,15 @@
   };
 
   var LDA = function(address) {
+  // LDA                  LDA Load accumulator with memory                 LDA
+  // Operation:  M -> A                                    S Z C I D V
+  //                                                       / / _ _ _ _
     var memValue = read(address);
 
     testAndSetFlag(Z, memValue);
     testAndSetFlag(S, memValue);
 
-    cpu.accumulator = memValue;
+    write('accumulator', memValue);
     cpu.pc += OP_BYTES[cpu.op];
   };
 
@@ -595,7 +609,7 @@
 
   var ORA = function(address) {
   // ORA                 ORA "OR" memory with accumulator                  ORA
-  // Operation: A | M -> A                                 N Z C I D V
+  // Operation: A | M -> A                                 S Z C I D V
   //                                                       / / _ _ _ _
     var memValue = read(address);
     var result = cpu.accumulator | memValue;
@@ -781,7 +795,6 @@
   //                                                       _ _ _ _ _ _
     write(address, cpu.regX);
     cpu.pc += OP_BYTES[cpu.op];
-
   };
 
   var TAX = function() {
@@ -970,6 +983,9 @@
     case 0x8A:
       TXA();
       break;
+    case 0x8D:
+      STA(absolute());
+      break;
     case 0x8E:
       STX(absolute());
       break;
@@ -985,8 +1001,14 @@
     case 0xA0:
       LDY(immediate());
       break;
+    case 0xA1:
+      LDA(indirectX());
+      break;
     case 0xA2:
       LDX(immediate());
+      break;
+    case 0xA5:
+      LDA(zeroPage());
       break;
     case 0xA8:
       TAY();
