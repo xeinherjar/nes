@@ -200,8 +200,6 @@
     var low  = read(lowAddress & 0xFF);
     var high = read((lowAddress + 1) & 0xFF);
     var word = (high << 8) | low;
-    console.log(lowAddress, low, high, word);
-    console.log(cpu.getNextByte(), cpu.regX);
 
     return word;
   };
