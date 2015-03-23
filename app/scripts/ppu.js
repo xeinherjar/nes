@@ -22,7 +22,25 @@
   var mBuffer = new ArrayBuffer(0x3FFF + 1);
   ppu.vram  = new Uint8Array(mBuffer);
 
+  var read = function(address) {
 
+  };
+
+  var write = function(address, value) {
+
+  };
+
+
+  /* REGISTERS */
+  ppu.ctrl = 0;
+  ppu.mask = 0;
+  ppu.status = 0;
+  ppu.oamaddr = 0;
+  ppu.oamdata = 0;
+  ppu.scroll = 0;
+  ppu.addr = 0;
+  ppu.data = 0;
+  ppu.oamdma = 0;
 
 
 

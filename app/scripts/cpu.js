@@ -6,7 +6,8 @@
 
   /* REGISTERS */
   /* Program Counter is 16 bits wide */
-  cpu.pc = 0xC000;
+  //cpu.pc = 0xC000;
+  cpu.pc = (nes.memory.read(0xFFFC) << 8) | nes.memory.read(0xFFFF);
 
   /* Stack Pointer
    * Least significant byte of address starting at offset 0x100
@@ -106,7 +107,7 @@
 
 
   /* COUNTERS */
-  var cycles = 0;
+  cpu.cycles = 0;
 
 
   /* HELPERS */
@@ -381,7 +382,7 @@
     cpu.pc += 2;
     cpu.push(cpu.pc);
     cpu.push(cpu.flags);
-    setFlagBit(B);
+    setFlagBit(B); // nestech.txt says to set
 
     var low  = read(0xFFFE);
     var high = read(0xFFFF);

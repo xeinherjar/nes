@@ -32,6 +32,7 @@ memory.read = function(address) {
     return memory.ram[address & 0x07FF];
   } else if (address < 0x3FFF) {
     /* Mirror of 0x2000 - 0x2007 */
+    /* Memory mapped to PPU */
     return memory.ram[0x2000 + (address & 0x7)];
   } else {
     /* Everything else */
@@ -46,6 +47,7 @@ memory.write = function(address, value) {
     memory.ram[address & 0x07FF] = (value & 0xFF);
   } else if (address < 0x3FFF) {
     /* Mirror of 0x2000 - 0x2007 */
+    /* Memory mapped to PPU */
     memory.ram[0x2000 + (address & 0x7)] = (value & 0xFF);
   } else {
     /* Everything else */
