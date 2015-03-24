@@ -6,8 +6,8 @@
 
   /* REGISTERS */
   /* Program Counter is 16 bits wide */
-  cpu.pc = 0xC000;
- // cpu.pc = (nes.memory.read(0xFFFC) << 8) | nes.memory.read(0xFFFF);
+  //cpu.pc = 0xC000;
+  cpu.pc = (nes.memory.read(0xFFFC) << 8) | nes.memory.read(0xFFFD);
 
   /* Stack Pointer
    * Least significant byte of address starting at offset 0x100
@@ -258,6 +258,41 @@
     return (cpu.getNextByte() + cpu.regY) & 0xFF;
   };
 
+
+  /* INTERUPTS */
+
+  var NMI = function() {
+    // cpu.pc += 2;
+    // cpu.cycles += 7;
+
+    cpu.push(cpu.pc);
+    cpu.push(cpu.flags);
+    setFlagBit(I);
+
+    var low  = read(0xFFFA);
+    var high = read(0xFFFB);
+    cpu.pc = (high << 8) | low;
+  };
+
+  var IRQ = function() {
+    // cpu.pc += 2;
+    // cpu.cycles += 7;
+
+    cpu.push(cpu.pc);
+    cpu.push(cpu.flags);
+    setFlagBit(I);
+
+    var low  = read(0xFFFE);
+    var high = read(0xFFFF);
+    cpu.pc = (high << 8) | low;
+  };
+
+  var reset = function() {
+    cpu.pc = (nes.memory.read(0xFFFC) << 8) | nes.memory.read(0xFFFD);
+    cpu.sp = 0xFD;
+    cpu.flags = 0x24;
+  };
+
   /* OPCODES */
 
   var ADC = function(address) {
@@ -486,6 +521,14 @@
   // Operation:  0 -> D                                    S A C I D V
   //                                                       _ _ _ _ 0 _
     clearFlagBit(D);
+    cpu.pc += OP_BYTES[cpu.op];
+  };
+
+  var CLI = function() {
+  // CLI                  CLI Clear interrupt disable bit                  CLI
+  // Operation: 0 -> I                                     S Z C I D V
+  //                                                       _ _ _ 0 _ _
+    clearFlagBit(I); 
     cpu.pc += OP_BYTES[cpu.op];
   };
 
@@ -1216,6 +1259,10 @@
     case 0x56:
       cpu.cycles += 6;
       LSR(zeroPageX());
+      break;
+    case 0x58:
+      cpu.cycles += 2;
+      CLI();
       break;
     case 0x59:
       absoluteY_pageBoundry();

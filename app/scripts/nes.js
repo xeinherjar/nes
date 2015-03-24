@@ -8,3 +8,8 @@ setTimeout(function() {
 
 console.log('Init CPU');
 setTimeout(function() {nes.cpu.flags = 0x24;}, 2500);
+
+
+nes.step = function() {
+  nes.cpu.step();
+};
