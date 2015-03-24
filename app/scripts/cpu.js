@@ -174,8 +174,7 @@
     var word = cpu.getNextWord();
     var addr = (word + cpu.regX);
 
-    if (addr >> 8 > word >> 8) { cpu.cycles += 1; }
-    console.log('ABX');
+    if ((addr >> 8) != (word >> 8)) { cpu.cycles += 1; }
   };
 
   var absoluteY = function() {
@@ -186,8 +185,7 @@
     var word = cpu.getNextWord();
     var addr = (word + cpu.regY);
 
-    if (addr >> 8 > word >> 8) { cpu.cycles += 1; }
-    console.log('ABY');
+    if ((addr >> 8) > (word >> 8)) { cpu.cycles += 1; }
   };
 
   var immediate = function() {
@@ -1474,7 +1472,7 @@
       break;
     case 0xBC:
       absoluteX_pageBoundry();
-      cpu.cycles += 3;
+      cpu.cycles += 4;
       LDY(absoluteX());
       break;
     case 0xC0:
