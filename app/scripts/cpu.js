@@ -237,7 +237,7 @@
     var word = (high << 8) | low;
     var addr = (word + cpu.regY);
 
-    if (addr >> 8 > word >> 8) { cpu.cycles += 1;
+    if ((addr >> 8) > (word >> 8)) { cpu.cycles += 1;
 
     }
   };
