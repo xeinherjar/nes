@@ -41,7 +41,6 @@ memory.read = function(address) {
 };
 
 memory.write = function(address, value) {
-  if (address === 0) { console.log('asdf', value); }
   /* Mirror of lower byte range */
   if (address < 0x2000) {
     memory.ram[address & 0x07FF] = (value & 0xFF);

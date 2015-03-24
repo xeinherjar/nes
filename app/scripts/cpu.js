@@ -6,8 +6,8 @@
 
   /* REGISTERS */
   /* Program Counter is 16 bits wide */
-  //cpu.pc = 0xC000;
-  cpu.pc = (nes.memory.read(0xFFFC) << 8) | nes.memory.read(0xFFFF);
+  cpu.pc = 0xC000;
+ // cpu.pc = (nes.memory.read(0xFFFC) << 8) | nes.memory.read(0xFFFF);
 
   /* Stack Pointer
    * Least significant byte of address starting at offset 0x100
@@ -169,8 +169,25 @@
     return (cpu.getNextWord() + cpu.regX) & 0xFFFF;
   };
 
+  // Extra cycles on page boundry crossing
+  var absoluteX_pageBoundry = function() {
+    var word = cpu.getNextWord();
+    var addr = (word + cpu.regX) & 0xFFFF;
+
+    if (addr >> 8 > word >> 8) { cpu.cycles += 1; }
+    console.log('ABX');
+  };
+
   var absoluteY = function() {
-    return (cpu.getNextWord() + cpu.regY) & 0xFFFF;
+        return (cpu.getNextWord() +cpu.regY) & 0xFFFF;
+  };
+
+  var absoluteY_pageBoundry = function() {
+    var word = cpu.getNextWord();
+    var addr = (word + cpu.regY) & 0xFFFF;
+
+    if (addr >> 8 > word >> 8) { cpu.cycles += 1; }
+    console.log('ABY');
   };
 
   var immediate = function() {
@@ -210,8 +227,20 @@
     var low  = read(lowAddress & 0xFF);
     var high = read((lowAddress + 1) & 0xFF);
     var word = (high << 8) | low;
+    var addr = (word + cpu.regY) & 0xFFFF;
 
-    return (word + cpu.regY) & 0xFFFF;
+    return addr;
+  };
+
+  var indirectY_pageBoundry = function() {
+    var lowAddress = cpu.getNextByte();
+    var low  = read(lowAddress & 0xFF);
+    var high = read((lowAddress + 1) & 0xFF);
+    var word = (high << 8) | low;
+    var addr = (word + cpu.regY) & 0xFFFF;
+
+    if (addr >> 8 > word >> 8) { cpu.cycles += 1; }
+    console.log('INDY');
   };
 
   var relative = function() {
@@ -288,7 +317,11 @@
   // Operation:  Branch on C = 0                           _ _ _ _ _ _
     var value = address;
     if (!getFlag(C)) {
-      cpu.pc += toSignedInt(value);
+      var branch = toSignedInt(value);
+      cpu.cycles += 1;
+      if (cpu.pc >> 8 < ((cpu.pc + branch) >> 8)) { cpu.cycles += 1; }
+
+      cpu.pc += branch;
     }
 
     cpu.pc += OP_BYTES[cpu.op];
@@ -300,7 +333,11 @@
   //                                                       _ _ _ _ _ _
     var value = address;
     if (getFlag(C)) {
-      cpu.pc += toSignedInt(value);
+      var branch = toSignedInt(value);
+      cpu.cycles += 1;
+      if (cpu.pc >> 8 < ((cpu.pc + branch) >> 8)) { cpu.cycles += 1; }
+
+      cpu.pc += branch;
     }
 
     cpu.pc += OP_BYTES[cpu.op];
@@ -312,7 +349,11 @@
   // Operation:  Branch on Z = 1                           _ _ _ _ _ _
     var value = address;
     if (getFlag(Z)) {
-      cpu.pc += toSignedInt(value);
+      var branch = toSignedInt(value);
+      cpu.cycles += 1;
+      if (cpu.pc >> 8 < ((cpu.pc + branch) >> 8)) { cpu.cycles += 1; }
+
+      cpu.pc += branch;
     }
 
     cpu.pc += OP_BYTES[cpu.op];
@@ -345,7 +386,11 @@
   //                                                       _ _ _ _ _ _
     var value = address;
     if (getFlag(S)) {
-      cpu.pc += toSignedInt(value);
+      var branch = toSignedInt(value);
+      cpu.cycles += 1;
+      if (cpu.pc >> 8 < ((cpu.pc + branch) >> 8)) { cpu.cycles += 1; }
+
+      cpu.pc += branch;
     }
 
     cpu.pc += OP_BYTES[cpu.op];
@@ -357,7 +402,11 @@
   //                                                       _ _ _ _ _ _
     var value = address;
     if (!getFlag(Z)) {
-      cpu.pc += toSignedInt(value);
+      var branch = toSignedInt(value);
+      cpu.cycles += 1;
+      if (cpu.pc >> 8 < ((cpu.pc + branch) >> 8)) { cpu.cycles += 1; }
+
+      cpu.pc += branch;
     }
 
     cpu.pc += OP_BYTES[cpu.op];
@@ -369,7 +418,11 @@
   //                                                       _ _ _ _ _ _
     var value = address;
     if (!getFlag(S)) {
-      cpu.pc += toSignedInt(value);
+      var branch = toSignedInt(value);
+      cpu.cycles += 1;
+      if (cpu.pc >> 8 < ((cpu.pc + branch) >> 8)) { cpu.cycles += 1; }
+
+      cpu.pc += branch;
     }
 
     cpu.pc += OP_BYTES[cpu.op];
@@ -395,7 +448,11 @@
   //                                                       _ _ _ _ _ _
     var value = address;
     if (!getFlag(V)) {
-      cpu.pc += toSignedInt(value);
+      var branch = toSignedInt(value);
+      cpu.cycles += 1;
+      if (cpu.pc >> 8 < ((cpu.pc + branch) >> 8)) { cpu.cycles += 1; }
+
+      cpu.pc += branch;
     }
 
     cpu.pc += OP_BYTES[cpu.op];
@@ -407,7 +464,11 @@
   //                                                       _ _ _ _ _ _
     var value = address;
     if (getFlag(V)) {
-      cpu.pc += toSignedInt(value);
+      var branch = toSignedInt(value);
+      cpu.cycles += 1;
+      if (cpu.pc >> 8 < ((cpu.pc + branch) >> 8)) { cpu.cycles += 1; }
+
+      cpu.pc += branch;
     }
 
     cpu.pc += OP_BYTES[cpu.op];
@@ -936,7 +997,6 @@
   var stepCount = 1;
   cpu.step = function() {
     cpu.op = nes.memory.read(cpu.pc);
-    /*
     console.log(stepCount + ': ' +
                 cpu.pc.toString(16) +
                 ' OP: ' + cpu.op.toString(16) +
@@ -944,460 +1004,634 @@
                 ' X: ' + cpu.regX.toString(16) +
                 ' Y: ' + cpu.regY.toString(16) +
                 ' P: ' + cpu.flags.toString(16) +
-                ' SP: ' + cpu.sp.toString(16)
+                ' SP: ' + cpu.sp.toString(16) +
+                ' cyc: ' + (cpu.cycles * 3) % 341
     );
     stepCount += 1;
-    */
+
    // JSPerf says switch is 66% faster than a map
    switch (cpu.op) {
     case 0x00:
+      cpu.cycles += 7;
       BRK();
       break;
     case 0x01:
+      cpu.cycles += 6;
       ORA(indirectX());
       break;
     case 0x05:
+      cpu.cycles += 3;
       ORA(zeroPage());
       break;
     case 0x06:
+      cpu.cycles += 5;
       ASL(zeroPage());
       break;
     case 0x08:
+      cpu.cycles += 3;
       PHP();
       break;
     case 0x09:
+      cpu.cycles += 2;
       ORA(immediate());
       break;
    case 0x0A:
+      cpu.cycles += 2;
       ASL(accumulator());
       break;
     case 0x0D:
+      cpu.cycles += 4;
       ORA(absolute());
       break;
     case 0x0E:
+      cpu.cycles += 6;
       ASL(absolute());
       break;
     case 0x10:
+      cpu.cycles += 2;
       BPL(relative());
       break;
     case 0x11:
+      indirectY_pageBoundry();
+      cpu.cycles += 5;
       ORA(indirectY());
       break;
     case 0x15:
+      cpu.cycles += 4;
       ORA(zeroPageX());
       break;
     case 0x16:
+      cpu.cycles += 6;
       ASL(zeroPageX());
       break;
     case 0x18:
+      cpu.cycles += 2;
       CLC();
       break;
     case 0x19:
+      absoluteY_pageBoundry();
+      cpu.cycles += 4;
       ORA(absoluteY());
       break;
     case 0x1D:
+      absoluteX_pageBoundry();
+      cpu.cycles += 4;
       ORA(absoluteX());
       break;
     case 0x1E:
+      cpu.cycles += 7;
       ASL(absoluteX());
       break;
     case 0x20:
+      cpu.cycles += 6;
       JSR(absolute());
       break;
     case 0x21:
+      cpu.cycles += 6;
       AND(indirectX());
       break;
     case 0x24:
+      cpu.cycles += 3;
       BIT(zeroPage());
       break;
     case 0x25:
+      cpu.cycles += 3;
       AND(zeroPage());
       break;
     case 0x26:
+      cpu.cycles += 5;
       ROL(zeroPage());
       break;
     case 0x28:
+      cpu.cycles += 4;
       PLP();
       break;
     case 0x29:
+      cpu.cycles += 2;
       AND(immediate());
       break;
     case 0x2A:
+      cpu.cycles += 2;
       ROL(accumulator());
       break;
     case 0x2C:
+      cpu.cycles += 4;
       BIT(absolute());
       break;
     case 0x2D:
+      cpu.cycles += 4;
       AND(absolute());
       break;
     case 0x2E:
+      cpu.cycles += 6;
       ROL(absolute());
       break;
     case 0x30:
+      cpu.cycles += 2;
       BMI(relative());
       break;
     case 0x31:
+      indirectY_pageBoundry();
+      cpu.cycles += 5;
       AND(indirectY());
       break;
     case 0x35:
+      cpu.cycles += 4;
       AND(zeroPageX());
       break;
     case 0x36:
+      cpu.cycles += 6;
       ROL(zeroPageX());
       break;
     case 0x38:
+      cpu.cycles += 2;
       SEC();
       break;
     case 0x39:
+      absoluteY_pageBoundry();
+      cpu.cycles += 4;
       AND(absoluteY());
       break;
     case 0x3D:
+      absoluteX_pageBoundry();
+      cpu.cycles += 4;
       AND(absoluteX());
       break;
     case 0x3E:
+      cpu.cycles += 7;
       ROL(absoluteX());
       break;
     case 0x40:
+      cpu.cycles += 6;
       RTI();
       break;
     case 0x41:
+      cpu.cycles += 6;
       EOR(indirectX());
       break;
     case 0x45:
+      cpu.cycles += 3;
       EOR(zeroPage());
       break;
     case 0x46:
+      cpu.cycles += 5;
       LSR(zeroPage());
       break;
     case 0x48:
+      cpu.cycles += 3;
       PHA();
       break;
     case 0x49:
+      cpu.cycles += 2;
       EOR(immediate());
       break;
     case 0x4A:
+      cpu.cycles += 2;
       LSR(accumulator());
       break;
     case 0x4C:
+      cpu.cycles += 3;
       JMP(absolute());
       break;
     case 0x4D:
+      cpu.cycles += 4;
       EOR(absolute());
       break;
     case 0x4E:
+      cpu.cycles += 6;
       LSR(absolute());
       break;
     case 0x50:
+      cpu.cycles += 2;
       BVC(relative());
       break;
     case 0x51:
+      indirectY_pageBoundry();
+      cpu.cycles += 5;
       EOR(indirectY());
       break;
     case 0x55:
+      cpu.cycles += 4;
       EOR(zeroPageX());
       break;
     case 0x56:
+      cpu.cycles += 6;
       LSR(zeroPageX());
       break;
     case 0x59:
+      absoluteY_pageBoundry();
+      cpu.cycles += 4;
       EOR(absoluteY());
       break;
     case 0x5D:
+      absoluteX_pageBoundry();
+      cpu.cycles += 4;
       EOR(absoluteX());
       break;
     case 0x5E:
+      cpu.cycles += 7;
       LSR(absoluteX());
       break;
     case 0x60:
+      cpu.cycles += 6;
       RTS();
       break;
     case 0x61:
+      cpu.cycles += 4;
       ADC(indirectX());
       break;
     case 0x65:
+      cpu.cycles += 3;
       ADC(zeroPage());
       break;
     case 0x66:
+      cpu.cycles += 5;
       ROR(zeroPage());
       break;
     case 0x68:
+      cpu.cycles += 4;
       PLA();
       break;
     case 0x69:
+      cpu.cycles += 2;
       ADC(immediate());
       break;
     case 0x6A:
+      cpu.cycles += 2;
       ROR(accumulator());
       break;
     case 0x6C:
+      cpu.cycles += 5;
       JMP(indirect());
       break;
     case 0x6D:
+      cpu.cycles += 4;
       ADC(absolute());
       break;
     case 0x6E:
+      cpu.cycles += 6;
       ROR(absolute());
       break;
     case 0x70:
+      cpu.cycles += 2;
       BVS(relative());
       break;
     case 0x71:
+      indirectY_pageBoundry();
+      cpu.cycles += 5;
       ADC(indirectY());
       break;
     case 0x75:
+      cpu.cycles += 4;
       ADC(zeroPageX());
       break;
     case 0x76:
+      cpu.cycles += 6;
       ROR(zeroPageX());
       break;
     case 0x78:
+      cpu.cycles += 2;
       SEI();
       break;
     case 0x79:
+      absoluteY_pageBoundry();
+      cpu.cycles += 4;
       ADC(absoluteY());
       break;
     case 0x7D:
+      absoluteX_pageBoundry();
+      cpu.cycles += 4;
       ADC(absoluteX());
       break;
     case 0x7E:
+      cpu.cycles += 7;
       ROR(absoluteX());
       break;
     case 0x81:
+      cpu.cycles += 6;
       STA(indirectX());
       break;
     case 0x84:
+      cpu.cycles += 3;
       STY(zeroPage());
       break;
     case 0x85:
+      cpu.cycles += 3;
       STA(zeroPage());
       break;
     case 0x86:
+      cpu.cycles += 3;
       STX(zeroPage());
       break;
     case 0x88:
+      cpu.cycles += 2;
       DEY();
       break;
     case 0x8A:
+      cpu.cycles += 2;
       TXA();
       break;
     case 0x8C:
+      cpu.cycles += 4;
       STY(absolute());
       break;
     case 0x8D:
+      cpu.cycles += 4;
       STA(absolute());
       break;
     case 0x8E:
+      cpu.cycles += 4;
       STX(absolute());
       break;
     case 0x90:
+      cpu.cycles += 2;
       BCC(relative());
       break;
     case 0x91:
+      cpu.cycles += 6;
       STA(indirectY());
       break;
     case 0x94:
+      cpu.cycles += 4;
       STY(zeroPageX());
       break;
     case 0x95:
+      cpu.cycles += 4;
       STA(zeroPageX());
       break;
     case 0x96:
+      cpu.cycles += 4;
       STX(zeroPageY());
       break;
     case 0x98:
+      cpu.cycles += 2;
       TYA();
       break;
     case 0x99:
+      cpu.cycles += 5;
       STA(absoluteY());
       break;
     case 0x9A:
+      cpu.cycles += 2;
       TXS();
       break;
     case 0x9D:
+      cpu.cycles += 5;
       STA(absoluteX());
       break;
     case 0xA0:
+      cpu.cycles += 2;
       LDY(immediate());
       break;
     case 0xA1:
+      cpu.cycles += 6;
       LDA(indirectX());
       break;
     case 0xA2:
+      cpu.cycles += 2;
       LDX(immediate());
       break;
     case 0xA4:
+      cpu.cycles += 3;
       LDY(zeroPage());
       break;
     case 0xA5:
+      cpu.cycles += 3;
       LDA(zeroPage());
       break;
     case 0xA6:
+      cpu.cycles += 3;
       LDX(zeroPage());
       break;
     case 0xA8:
+      cpu.cycles += 2;
       TAY();
       break;
     case 0xA9:
+      cpu.cycles += 2;
       LDA(immediate());
       break;
     case 0xAA:
+      cpu.cycles += 2;
       TAX();
       break;
     case 0xAC:
+      cpu.cycles += 4;
       LDY(absolute());
       break;
     case 0xAD:
+      cpu.cycles += 4;
       LDA(absolute());
       break;
     case 0xAE:
+      cpu.cycles += 4;
       LDX(absolute());
       break;
     case 0xB0:
+      cpu.cycles += 2;
       BCS(relative());
       break;
     case 0xB1:
+      indirectY_pageBoundry();
+      cpu.cycles += 5;
       LDA(indirectY());
       break;
     case 0xB4:
+      cpu.cycles += 4;
       LDY(zeroPageX());
       break;
     case 0xB5:
+      cpu.cycles += 4;
       LDA(zeroPageX());
       break;
     case 0xB6:
+      cpu.cycles += 4;
       LDX(zeroPageY());
       break;
     case 0xB8:
+      cpu.cycles += 2;
       CLV();
       break;
     case 0xB9:
+      absoluteY_pageBoundry();
+      cpu.cycles += 4;
       LDA(absoluteY());
       break;
     case 0xBD:
+      absoluteX_pageBoundry();
+      cpu.cycles += 4;
       LDA(absoluteX());
       break;
     case 0xBE:
+      absoluteY_pageBoundry();
+      cpu.cycles += 4;
       LDX(absoluteY());
       break;
     case 0xBA:
+      cpu.cycles += 2;
       TSX();
       break;
     case 0xBC:
+      absoluteX_pageBoundry();
+      cpu.cycles += 3;
       LDY(absoluteX());
       break;
     case 0xC0:
+      cpu.cycles += 2;
       CPY(immediate());
       break;
     case 0xC1:
+      cpu.cycles += 6;
       CMP(indirectX());
       break;
     case 0xC4:
+      cpu.cycles += 3;
       CPY(zeroPage());
       break;
     case 0xC5:
+      cpu.cycles += 3;
       CMP(zeroPage());
       break;
     case 0xC6:
+      cpu.cycles += 5;
       DEC(zeroPage());
       break;
     case 0xC8:
+      cpu.cycles += 2;
       INY();
       break;
     case 0xC9:
+      cpu.cycles += 2;
       CMP(immediate());
       break;
     case 0xCA:
+      cpu.cycles += 2;
       DEX();
       break;
     case 0xCC:
+      cpu.cycles += 4;
       CPY(absolute());
       break;
     case 0xCD:
+      cpu.cycles += 4;
       CMP(absolute());
       break;
     case 0xCE:
+      cpu.cycles += 6;
       DEC(absolute());
       break;
     case 0xD0:
+      cpu.cycles += 2;
       BNE(relative());
       break;
     case 0xD1:
+      indirectY_pageBoundry();
+      cpu.cycles += 5;
       CMP(indirectY());
       break;
     case 0xD5:
+      cpu.cycles += 4;
       CMP(zeroPageX());
       break;
     case 0xD6:
+      cpu.cycles += 6;
       DEC(zeroPageX());
       break;
     case 0xD8:
+      cpu.cycles += 2;
       CLD();
       break;
     case 0xD9:
+      absoluteY_pageBoundry();
+      cpu.cycles += 4;
       CMP(absoluteY());
       break;
     case 0xDD:
+      absoluteX_pageBoundry();
+      cpu.cycles += 4;
       CMP(absoluteX());
       break;
     case 0xDE:
+      cpu.cycles += 7;
       DEC(absoluteX());
       break;
     case 0xE0:
+      cpu.cycles += 2;
       CPX(immediate());
       break;
     case 0xE1:
+      cpu.cycles += 6;
       SBC(indirectX());
       break;
     case 0xE4:
+      cpu.cycles += 3;
       CPX(zeroPage());
       break;
     case 0xE5:
+      cpu.cycles += 3;
       SBC(zeroPage());
       break;
     case 0xE6:
+      cpu.cycles += 5;
       INC(zeroPage());
       break;
     case 0xE8:
+      cpu.cycles += 2;
       INX();
       break;
     case 0xE9:
+      cpu.cycles += 2;
       SBC(immediate());
       break;
     case 0xEA:
+      cpu.cycles += 2;
       NOP();
       break;
     case 0xEC:
+      cpu.cycles += 4;
       CPX(absolute());
       break;
     case 0xED:
+      cpu.cycles += 4;
       SBC(absolute());
       break;
     case 0xEE:
+      cpu.cycles += 6;
       INC(absolute());
       break;
     case 0xF0:
+      cpu.cycles += 2;
       BEQ(relative());
       break;
     case 0xF1:
+      indirectY_pageBoundry();
+      cpu.cycles += 5;
       SBC(indirectY());
       break;
     case 0xF5:
+      cpu.cycles += 4;
       SBC(zeroPageX());
       break;
     case 0xF6:
+      cpu.cycles += 6;
       INC(zeroPageX());
       break;
     case 0xF8:
+      cpu.cycles += 2;
       SED();
       break;
     case 0xF9:
+      absoluteY_pageBoundry();
+      cpu.cycles += 4;
       SBC(absoluteY());
       break;
     case 0xFD:
+      absoluteX_pageBoundry();
+      cpu.cycles += 4;
       SBC(absoluteX());
       break;
     case 0xFE:
+      cpu.cycles += 7;
       INC(absoluteX());
       break;
     default:
