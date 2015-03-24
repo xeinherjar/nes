@@ -172,7 +172,7 @@
   // Extra cycles on page boundry crossing
   var absoluteX_pageBoundry = function() {
     var word = cpu.getNextWord();
-    var addr = (word + cpu.regX) & 0xFFFF;
+    var addr = (word + cpu.regX);
 
     if (addr >> 8 > word >> 8) { cpu.cycles += 1; }
     console.log('ABX');
@@ -184,7 +184,7 @@
 
   var absoluteY_pageBoundry = function() {
     var word = cpu.getNextWord();
-    var addr = (word + cpu.regY) & 0xFFFF;
+    var addr = (word + cpu.regY);
 
     if (addr >> 8 > word >> 8) { cpu.cycles += 1; }
     console.log('ABY');
@@ -237,10 +237,11 @@
     var low  = read(lowAddress & 0xFF);
     var high = read((lowAddress + 1) & 0xFF);
     var word = (high << 8) | low;
-    var addr = (word + cpu.regY) & 0xFFFF;
+    var addr = (word + cpu.regY);
 
-    if (addr >> 8 > word >> 8) { cpu.cycles += 1; }
-    console.log('INDY');
+    if (addr >> 8 > word >> 8) { cpu.cycles += 1;
+
+    }
   };
 
   var relative = function() {
@@ -315,6 +316,8 @@
   // BCC                     BCC Branch on Carry Clear                     BCC
   //                                                       S Z C I D V
   // Operation:  Branch on C = 0                           _ _ _ _ _ _
+    cpu.pc += OP_BYTES[cpu.op];
+
     var value = address;
     if (!getFlag(C)) {
       var branch = toSignedInt(value);
@@ -323,14 +326,14 @@
 
       cpu.pc += branch;
     }
-
-    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var BCS = function(address) {
   //  BCS                      BCS Branch on carry set                      BCS
   // Operation:  Branch on C = 1                           S Z C I D V
   //                                                       _ _ _ _ _ _
+    cpu.pc += OP_BYTES[cpu.op];
+
     var value = address;
     if (getFlag(C)) {
       var branch = toSignedInt(value);
@@ -339,14 +342,14 @@
 
       cpu.pc += branch;
     }
-
-    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var BEQ = function(address) {
   // BEQ                    BEQ Branch on result zero                      BEQ
   //                                                       S Z C I D V
   // Operation:  Branch on Z = 1                           _ _ _ _ _ _
+    cpu.pc += OP_BYTES[cpu.op];
+
     var value = address;
     if (getFlag(Z)) {
       var branch = toSignedInt(value);
@@ -355,8 +358,6 @@
 
       cpu.pc += branch;
     }
-
-    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var BIT = function(address) {
@@ -384,6 +385,8 @@
   // BMI                    BMI Branch on result minus                     BMI
   // Operation:  Branch on N = 1                           S Z C I D V
   //                                                       _ _ _ _ _ _
+    cpu.pc += OP_BYTES[cpu.op];
+
     var value = address;
     if (getFlag(S)) {
       var branch = toSignedInt(value);
@@ -392,14 +395,14 @@
 
       cpu.pc += branch;
     }
-
-    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var BNE = function(address) {
   // BNE                   BNE Branch on result not zero                   BNE
   // Operation:  Branch on Z = 0                           S Z C I D V
   //                                                       _ _ _ _ _ _
+    cpu.pc += OP_BYTES[cpu.op];
+
     var value = address;
     if (!getFlag(Z)) {
       var branch = toSignedInt(value);
@@ -408,14 +411,14 @@
 
       cpu.pc += branch;
     }
-
-    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var BPL = function(address) {
   // BPL                     BPL Branch on result plus                     BPL
   // Operation:  Branch on S = 0                           S Z C I D V
   //                                                       _ _ _ _ _ _
+    cpu.pc += OP_BYTES[cpu.op];
+
     var value = address;
     if (!getFlag(S)) {
       var branch = toSignedInt(value);
@@ -424,8 +427,6 @@
 
       cpu.pc += branch;
     }
-
-    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var BRK = function() {
@@ -433,6 +434,7 @@
   // Operation:  Forced Interrupt PC + 2 toS P toS         S Z C I D V
   //                                                       _ _ _ 1 _ _
     cpu.pc += 2;
+
     cpu.push(cpu.pc);
     cpu.push(cpu.flags);
     setFlagBit(B); // nestech.txt says to set
@@ -446,22 +448,23 @@
   // BVC                    BVC Branch on overflow clear                   BVC
   // Operation:  Branch on V = 0                           S Z C I D V
   //                                                       _ _ _ _ _ _
+    cpu.pc += OP_BYTES[cpu.op];
+
     var value = address;
     if (!getFlag(V)) {
       var branch = toSignedInt(value);
       cpu.cycles += 1;
       if (cpu.pc >> 8 < ((cpu.pc + branch) >> 8)) { cpu.cycles += 1; }
-
       cpu.pc += branch;
     }
-
-    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var BVS = function(address) {
   // BVS                    BVS Branch on overflow set                     BVS
   // Operation:  Branch on V = 1                           S Z C I D V
   //                                                       _ _ _ _ _ _
+    cpu.pc += OP_BYTES[cpu.op];
+
     var value = address;
     if (getFlag(V)) {
       var branch = toSignedInt(value);
@@ -470,8 +473,6 @@
 
       cpu.pc += branch;
     }
-
-    cpu.pc += OP_BYTES[cpu.op];
   };
 
   var CLC = function() {
@@ -1237,7 +1238,7 @@
       RTS();
       break;
     case 0x61:
-      cpu.cycles += 4;
+      cpu.cycles += 6;
       ADC(indirectX());
       break;
     case 0x65:
