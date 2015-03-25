@@ -70,6 +70,8 @@
    *     g: grayscale
    * */
   ppu.mask = 0;
+
+  /* PPUSTATUS */
   ppu.status = 0;   // 0x2002
   ppu.oamaddr = 0;  // 0x2003
   ppu.oamdata = 0;  // 0x2004
