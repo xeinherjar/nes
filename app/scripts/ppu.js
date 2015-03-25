@@ -22,25 +22,61 @@
   var mBuffer = new ArrayBuffer(0x3FFF + 1);
   ppu.vram  = new Uint8Array(mBuffer);
 
-  var read = function(address) {
+  ppu.read = function(address) {
 
   };
 
-  var write = function(address, value) {
+  ppu.write = function(address, value) {
 
   };
 
+  /* HELPERS */
+  var getBit = function(regsiter, bit) {
+    return (register >> bit) & 1;
+  };
+
+  var setBit = function(register, bit) {
+    bit = 1 << bit;
+    register &= ~bit;
+  };
+
+  var clearBit = function(register, bit) {
+    bit = 1 << bit;
+    register |= bit;
+  };
 
   /* REGISTERS */
+
+  /* PPUCTRL 0x2000 write
+   * Bit 7 6 5 4 3 2 1 0
+   *     V P H B S I N N
+   *     V: nmi enable,     P: master/slave
+   *     H: gb tile select, B: sprite tile select
+   *     S: increment mode, I: nametable select
+   *     NN: nametable select
+   *     N1: Add 240 to the Y scroll position
+   *     N0: Add 256 to the X scroll position
+   * */
   ppu.ctrl = 0;
+
+  /* PPUMASK 0x2001 write
+   * Bit 7 6 5 4 3 2 1 0
+   *     B G R s b M m g
+   *     B: emp blue, G: emp green
+   *     R: emp red , s: show sprites
+   *     b: show bg ,
+   *     M: show sprites in leftmost 8px of screen
+   *     m: show bg in leftmost 8px of screen
+   *     g: grayscale
+   * */
   ppu.mask = 0;
-  ppu.status = 0;
-  ppu.oamaddr = 0;
-  ppu.oamdata = 0;
-  ppu.scroll = 0;
-  ppu.addr = 0;
-  ppu.data = 0;
-  ppu.oamdma = 0;
+  ppu.status = 0;   // 0x2002
+  ppu.oamaddr = 0;  // 0x2003
+  ppu.oamdata = 0;  // 0x2004
+  ppu.scroll = 0;   // 0x2005
+  ppu.addr = 0;     // 0x2006
+  ppu.data = 0;     // 0x2007
+  ppu.oamdma = 0;   // 0x4014
 
 
 

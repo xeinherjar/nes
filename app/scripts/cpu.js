@@ -287,7 +287,7 @@
     cpu.pc = (high << 8) | low;
   };
 
-  var reset = function() {
+  cpu.reset = function() {
     cpu.pc = (nes.memory.read(0xFFFC) << 8) | nes.memory.read(0xFFFD);
     cpu.sp = 0xFD;
     cpu.flags = 0x24;
@@ -528,7 +528,7 @@
   // CLI                  CLI Clear interrupt disable bit                  CLI
   // Operation: 0 -> I                                     S Z C I D V
   //                                                       _ _ _ 0 _ _
-    clearFlagBit(I); 
+    clearFlagBit(I);
     cpu.pc += OP_BYTES[cpu.op];
   };
 

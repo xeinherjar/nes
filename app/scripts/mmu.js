@@ -18,68 +18,68 @@
 
 (function() {
 
-'use strict';
+  'use strict';
 
-var memory = {};
+  var memory = {};
 
-var mBuffer = new ArrayBuffer(0xFFFF + 1);
-memory.ram  = new Uint8Array(mBuffer);
-
-
-memory.read = function(address) {
-  /* Mirror of lower byte range */
-  if (address < 0x2000) {
-    return memory.ram[address & 0x07FF];
-  } else if (address < 0x3FFF) {
-    /* Mirror of 0x2000 - 0x2007 */
-    /* Memory mapped to PPU */
-    return memory.ram[0x2000 + (address & 0x7)];
-  } else {
-    /* Everything else */
-    return memory.ram[address];
-  }
-};
-
-memory.write = function(address, value) {
-  /* Mirror of lower byte range */
-  if (address < 0x2000) {
-    memory.ram[address & 0x07FF] = (value & 0xFF);
-  } else if (address < 0x3FFF) {
-    /* Mirror of 0x2000 - 0x2007 */
-    /* Memory mapped to PPU */
-    memory.ram[0x2000 + (address & 0x7)] = (value & 0xFF);
-  } else {
-    /* Everything else */
-    memory.ram[address] = (value & 0xFF);
-  }
-};
+  var mBuffer = new ArrayBuffer(0xFFFF + 1);
+  memory.ram  = new Uint8Array(mBuffer);
 
 
-memory.loadRom = function(data) {
-  /* 0x8000 - 0xFFFF */
-  var mapper = nes.rom.header.mapper;
-  /* Mapper 0 */
-  switch (mapper) {
-    case 0:
-      for (var i = 0; i < data.length; i++) {
-        memory.ram[0x8000 + i] = data[i];
-      }
-      if (data.length < 0x8000) {
-        console.log("Mapper 0: Mirroring");
+  memory.read = function(address) {
+    /* Mirror of lower byte range */
+    if (address < 0x2000) {
+      return memory.ram[address & 0x07FF];
+    } else if (address < 0x3FFF) {
+      /* Mirror of 0x2000 - 0x2007 */
+      /* Memory mapped to PPU */
+      return memory.ram[0x2000 + (address & 0x7)];
+    } else {
+      /* Everything else */
+      return memory.ram[address];
+    }
+  };
+
+  memory.write = function(address, value) {
+    /* Mirror of lower byte range */
+    if (address < 0x2000) {
+      memory.ram[address & 0x07FF] = (value & 0xFF);
+    } else if (address < 0x3FFF) {
+      /* Mirror of 0x2000 - 0x2007 */
+      /* Memory mapped to PPU */
+      memory.ram[0x2000 + (address & 0x7)] = (value & 0xFF);
+    } else {
+      /* Everything else */
+      memory.ram[address] = (value & 0xFF);
+    }
+  };
+
+
+  memory.loadRom = function(data) {
+    /* 0x8000 - 0xFFFF */
+    var mapper = nes.rom.header.mapper;
+    /* Mapper 0 */
+    switch (mapper) {
+      case 0:
         for (var i = 0; i < data.length; i++) {
-          memory.ram[0xC000 + i] = data[i];
+          memory.ram[0x8000 + i] = data[i];
         }
-      }
+        if (data.length < 0x8000) {
+          console.log("Mapper 0: Mirroring");
+          for (var i = 0; i < data.length; i++) {
+            memory.ram[0xC000 + i] = data[i];
+          }
+        }
 
-      break;
-    default:
-      console.log('Not supported');
+        break;
+      default:
+        console.log('Not supported');
 
-  }
+    }
 
-};
+  };
 
-window.nes = window.nes || {};
-window.nes.memory = memory;
+  window.nes = window.nes || {};
+  window.nes.memory = memory;
 
 }());
