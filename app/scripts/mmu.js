@@ -1,3 +1,4 @@
+// CPU Memory Layout
 /* ****************************************************************************
  * 0x0000 - 0x00FF    256  Zero Page
  * 0x0100 - 0x01FF    256  Stack Memory
@@ -21,36 +22,38 @@
   'use strict';
 
   var memory = {};
+  memory.cpu = [];
+  memory.ppu = [];
 
   var mBuffer = new ArrayBuffer(0xFFFF + 1);
-  memory.ram  = new Uint8Array(mBuffer);
+  memory.cpu.ram  = new Uint8Array(mBuffer);
 
 
   memory.read = function(address) {
     /* Mirror of lower byte range */
     if (address < 0x2000) {
-      return memory.ram[address & 0x07FF];
+      return memory.cpu.ram[address & 0x07FF];
     } else if (address < 0x3FFF) {
       /* Mirror of 0x2000 - 0x2007 */
       /* Memory mapped to PPU */
-      return memory.ram[0x2000 + (address & 0x7)];
+      return nes.ppu.readRegister(0x2000 + (address & 0x7));
     } else {
       /* Everything else */
-      return memory.ram[address];
+      return memory.cpu.ram[address];
     }
   };
 
   memory.write = function(address, value) {
     /* Mirror of lower byte range */
     if (address < 0x2000) {
-      memory.ram[address & 0x07FF] = (value & 0xFF);
+      memory.cpu.ram[address & 0x07FF] = (value & 0xFF);
     } else if (address < 0x3FFF) {
       /* Mirror of 0x2000 - 0x2007 */
       /* Memory mapped to PPU */
-      memory.ram[0x2000 + (address & 0x7)] = (value & 0xFF);
+      nes.ppu.writeRegister(0x2000 + (address & 0x7), (value & 0xFF));
     } else {
       /* Everything else */
-      memory.ram[address] = (value & 0xFF);
+      memory.cpu.ram[address] = (value & 0xFF);
     }
   };
 
@@ -62,12 +65,12 @@
     switch (mapper) {
       case 0:
         for (var i = 0; i < data.length; i++) {
-          memory.ram[0x8000 + i] = data[i];
+          memory.cpu.ram[0x8000 + i] = data[i];
         }
         if (data.length < 0x8000) {
           console.log("Mapper 0: Mirroring");
           for (var i = 0; i < data.length; i++) {
-            memory.ram[0xC000 + i] = data[i];
+            memory.cpu.ram[0xC000 + i] = data[i];
           }
         }
 

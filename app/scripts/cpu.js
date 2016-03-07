@@ -260,6 +260,12 @@
 
 
   /* INTERUPTS */
+  var interruptType = '';
+  var interruptRequested = false;
+  cpu.requestInterupt = function(type) {
+    interruptType = type;
+    interruptRequested = true;
+  };
 
   var NMI = function() {
     // cpu.pc += 2;
@@ -1051,8 +1057,25 @@
     );
     stepCount += 1;
 
-   // JSPerf says switch is 66% faster than a map
-   switch (cpu.op) {
+    // Perform interrupt request before instructions
+    if (interruptRequested) {
+      switch(interruptType) {
+        case 'NMI':
+          NMI();
+          break;
+        case 'IRQ':
+          IRQ();
+          break;
+        case 'RESET':
+          cpu.reset();
+          break;
+      }
+
+      interruptRequested = false;
+    }
+
+  // JSPerf says switch is 66% faster than a map
+  switch (cpu.op) {
     case 0x00:
       cpu.cycles += 7;
       BRK();
