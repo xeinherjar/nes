@@ -155,7 +155,7 @@
     ppu.reg.mask.b  = (value >> 3) & 1;
     ppu.reg.mask.M  = (value >> 2) & 1;
     ppu.reg.mask.m  = (value >> 1) & 1;
-    ppu.reg.mask.m  = value & 1;
+    ppu.reg.mask.g  = value & 1;
   };
 
   /* PPUSTATUS 0x2002 read
