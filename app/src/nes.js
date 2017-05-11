@@ -1,7 +1,10 @@
-console.log('Power up');
+import rom from './rom';
 
-nes.rom.load();
-setTimeout(nes.rom.parse, 1000);
+console.log('Powered up');
+rom.load().then((romData) => {
+  console.log('romData', romData);
+});
+/*
 setTimeout(function() {
  nes.memory.loadRom(nes.rom.prgData);
 }, 2000);
@@ -14,3 +17,4 @@ setTimeout(function() {nes.cpu.reset();}, 2500);
 nes.step = function() {
   nes.cpu.step();
 };
+*/

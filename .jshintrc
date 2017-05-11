@@ -1,0 +1,10 @@
+{
+  "strict": true,
+  "browser": true,
+  "eqeqeq": true,
+  "esversion": 6,
+  "globals": {
+    "require": true,
+    "module": true
+  }
+}

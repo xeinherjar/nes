@@ -1,29 +1,36 @@
 {
   "private": true,
-  "engines": {
-  "node": ">=0.10.0"
+  "name": "nes-js",
+  "version": "0.0.1",
+  "description": "NES emulator in JavaScript",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "webpack-dev-server --history-api-fallback --inline --progress",
+    "start": "npm run server"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com:xeinherjar/nes.git"
+  },
+  "author": "proto.merkabah@gmail.com",
+  "license": "ISC",
+  "homepage": "",
   "devDependencies": {
-  "connect": "^2.14.4",
-  "connect-livereload": "^0.4.0",
-  "gulp": "^3.6.0",
-  "gulp-autoprefixer": "^0.0.7",
-  "gulp-bower-files": "^0.2.1",
-  "gulp-cache": "^0.1.1",
-  "gulp-csso": "^0.2.6",
-  "gulp-filter": "^0.4.1",
-  "gulp-flatten": "^0.0.2",
-  "gulp-if": "^1.2.1",
-  "gulp-imagemin": "^0.6.0",
-  "gulp-livereload": "^2.0.0",
-  "gulp-load-plugins": "^0.5.0",
-  "gulp-prompt": "^0.1.1",
-  "gulp-size": "^0.4.0",
-  "gulp-uglify": "^0.3.0",
-  "gulp-useref": "^0.4.2",
-  "opn": "^0.1.1",
-  "rimraf": "^2.2.8",
-  "streamqueue": "^0.1.1",
-  "wiredep": "^1.4.3"
+    "autoprefixer": "^6.5.1",
+    "babel-core": "^6.18.2",
+    "babel-loader": "^6.2.7",
+    "babel-preset-es2015": "^6.18.0",
+    "css-loader": "^0.25.0",
+    "file-loader": "^0.9.0",
+    "node-sass": "^3.11.1",
+    "raw-loader": "^0.5.1",
+    "sass-loader": "^4.0.2",
+    "style-loader": "^0.13.1",
+    "webpack": "^1.13.3",
+    "webpack-dev-server": "^1.16.2"
+  },
+  "dependencies": {
+    "normalize.css": "^5.0.0"
   }
 }
