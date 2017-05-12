@@ -1,10 +1,11 @@
 {
-  "strict": true,
+  "strict": "implied",
   "browser": true,
   "eqeqeq": true,
   "esversion": 6,
   "globals": {
     "require": true,
-    "module": true
+    "module": true,
+    "console": true
   }
 }

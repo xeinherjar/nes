@@ -17,72 +17,68 @@
  * 0xFFFE - 0xFFFF      2  Address of Break (BRK instruction) handler routine
  * ***************************************************************************/
 
-(function() {
+import ppu from './ppu';
 
-  'use strict';
+const ramBuffer = new ArrayBuffer(0xFFFF + 1);
+const ram = new Uint8Array(ramBuffer);
 
-  var memory = {};
-  memory.cpu = [];
-  memory.ppu = [];
-
-  var mBuffer = new ArrayBuffer(0xFFFF + 1);
-  memory.cpu.ram  = new Uint8Array(mBuffer);
+const vramBuffer = new ArrayBuffer(0x3FFF + 1);
+const vram = new Uint8Array(vramBuffer);
 
 
-  memory.read = function(address) {
-    /* Mirror of lower byte range */
-    if (address < 0x2000) {
-      return memory.cpu.ram[address & 0x07FF];
-    } else if (address < 0x3FFF) {
-      /* Mirror of 0x2000 - 0x2007 */
-      /* Memory mapped to PPU */
-      return nes.ppu.readRegister(0x2000 + (address & 0x7));
-    } else {
-      /* Everything else */
-      return memory.cpu.ram[address];
-    }
-  };
+const read = (address) => {
+  /* Mirror of lower byte range */
+  if (address < 0x2000) {
+    return ram[address & 0x07FF];
+  } else if (address < 0x3FFF) {
+    /* Mirror of 0x2000 - 0x2007 */
+    /* Memory mapped to PPU */
+    return ppu.readRegister(0x2000 + (address & 0x7));
+  } else {
+    /* Everything else */
+    return ram[address];
+  }
+};
 
-  memory.write = function(address, value) {
-    /* Mirror of lower byte range */
-    if (address < 0x2000) {
-      memory.cpu.ram[address & 0x07FF] = (value & 0xFF);
-    } else if (address < 0x3FFF) {
-      /* Mirror of 0x2000 - 0x2007 */
-      /* Memory mapped to PPU */
-      nes.ppu.writeRegister(0x2000 + (address & 0x7), (value & 0xFF));
-    } else {
-      /* Everything else */
-      memory.cpu.ram[address] = (value & 0xFF);
-    }
-  };
+const write = (address, value) => {
+  /* Mirror of lower byte range */
+  if (address < 0x2000) {
+    ram[address & 0x07FF] = (value & 0xFF);
+  } else if (address < 0x3FFF) {
+    /* Mirror of 0x2000 - 0x2007 */
+    /* Memory mapped to PPU */
+    ppu.writeRegister(0x2000 + (address & 0x7), (value & 0xFF));
+  } else {
+    /* Everything else */
+    ram[address] = (value & 0xFF);
+  }
+};
 
 
-  memory.loadRom = function(data) {
-    /* 0x8000 - 0xFFFF */
-    var mapper = nes.rom.header.mapper;
-    /* Mapper 0 */
-    switch (mapper) {
-      case 0:
-        for (var i = 0; i < data.length; i++) {
-          memory.cpu.ram[0x8000 + i] = data[i];
+const loadRom = (header, data) => {
+  /* 0x8000 - 0xFFFF */
+  var mapper = header.mapper;
+  /* Mapper 0 */
+  switch (mapper) {
+    case 0:
+      console.log('Loading mapper 0');
+      for (let i = 0; i < data.length; i++) {
+        ram[0x8000 + i] = data[i];
+      }
+      if (data.length < 0x8000) {
+        console.log("Mapper 0: Mirroring");
+        for (let i = 0; i < data.length; i++) {
+          ram[0xC000 + i] = data[i];
         }
-        if (data.length < 0x8000) {
-          console.log("Mapper 0: Mirroring");
-          for (var i = 0; i < data.length; i++) {
-            memory.cpu.ram[0xC000 + i] = data[i];
-          }
-        }
+      }
 
-        break;
-      default:
-        console.log('Not supported');
+      break;
+    default:
+      console.log('Mapper not yet supported');
 
-    }
+  }
 
-  };
+};
 
-  window.nes = window.nes || {};
-  window.nes.memory = memory;
 
-}());
+export { loadRom, read, write };
