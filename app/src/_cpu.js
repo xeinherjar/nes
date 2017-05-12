@@ -1,28 +1,3 @@
-  /* ADDRESS MODES */
-  var read = function(address) {
-    switch (address) {
-      case 'accumulator':
-        return cpu.accumulator;
-      case 'immediate':
-        return cpu.getNextByte();
-      default:
-        return nes.memory.read(address);
-    }
-  };
-
-  var write = function(address, value) {
-    switch (address) {
-      case 'accumulator':
-        cpu.accumulator = value & 0xFF;
-        break;
-      case 'immediate':
-        nes.memory.write(cpu.getNextByte(), value);
-        break;
-      default:
-        nes.memory.write(address, value);
-    }
-  };
-
   var accumulator = function() {
     return 'accumulator';
   };

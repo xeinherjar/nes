@@ -1,18 +1,20 @@
 import * as mmu from './mmu';
 
 // REGISTERS
+let registers = { };
+
 // Program Counter is 16 bits wide
-let pc = (mmu.read(0xFFFC) << 8) | mmu.read(0xFFFD);
+registers.pc = (mmu.read(0xFFFC) << 8) | mmu.read(0xFFFD);
 
 /* Stack Pointer
  * Least significant byte of address starting at offset 0x100
  * [0x100 - 0x1FF]
  * Grows down in space, pushing decrements, popping increments
  * */
-let sp = 0xFD;
-let accumulator = 0;
-let regX = 0;
-let regY = 0;
+registers.sp = 0xFD;
+registers.accumulator = 0;
+registers.regX = 0;
+registers.regY = 0;
 
 /* Status Register | Flags
  * Bit 7  6  5  4  3  2  1  0
@@ -24,7 +26,7 @@ let regY = 0;
  *     (byte>>bit)&1
  *     233:11101001 : (233>>2)&1 = 0
  * */
-let flags = 0;
+registers.flags = 0;
 const C = 0, Z = 1, I = 2, D = 3,
       B = 4,        V = 6, S = 7;
 
@@ -41,44 +43,44 @@ const toSignedInt = (n) => {
 };
 
 const getCurrentByte = () => {
-  return mmu.read(pc);
+  return mmu.read(registers.pc);
 };
 
 const getNextByte = () => {
-  return mmu.read(pc + 1);
+  return mmu.read(registers.pc + 1);
 };
 
 const getNextWord = () => {
-  var low  = mmu.read(pc + 1);
-  var high = mmu.read(pc + 2);
+  var low  = mmu.read(registers.pc + 1);
+  var high = mmu.read(registers.pc + 2);
   var word = (high << 8) | low;
   return word;
 };
 
 /* HELPERS Stack */
 const push = (value) => {
-  mmu.write((0x100 + sp), value);
-  sp--;
+  mmu.write((0x100 + registers.sp), value);
+  registers.sp--;
 };
 
 const pull = () => {
-  sp++;
-  return mmu.read(0x100 + sp);
+  registers.sp++;
+  return mmu.read(0x100 + registers.sp);
 };
 
 /* HELPERS Flags */
 const getFlag = (mask) => {
-  return (flags >> mask) & 1;
+  return (registers.flags >> mask) & 1;
 };
 
 const clearFlagBit = (mask) => {
   mask = 1 << mask;
-  flags &= ~mask;
+  registers.flags &= ~mask;
 };
 
 const setFlagBit = (mask) => {
   mask = 1 << mask;
-  flags |= mask;
+  registers.flags |= mask;
 };
 
 const testAndSetCarry = (value) => {
@@ -118,6 +120,32 @@ const testAndSetSign = (value) => {
   }
 };
 
+/* ADDRESS MODES */
+const read = (address) => {
+  switch (address) {
+    case 'accumulator':
+      return registers.accumulator;
+    case 'immediate':
+      return getNextByte();
+    default:
+      return mmu.read(address);
+  }
+};
+
+const write = (address, value) => {
+  switch (address) {
+    case 'accumulator':
+      registers.accumulator = value & 0xFF;
+      break;
+    case 'immediate':
+      mmu.write(getNextByte(), value);
+      break;
+    default:
+      mmu.write(address, value);
+  }
+};
+
+
 // OPs Tables
 const OP_BYTES = [
   1, 2, 0, 0, 0, 2, 2, 0, 1, 2, 1, 0, 0, 3, 3, 0,
@@ -151,7 +179,7 @@ const requestInterrupt = (type) => {
 };
 
 const step = () => {
-  console.log('pc', pc);
+  console.log('pc', registers.pc);
   // Perform interrupt request before instructions
   // TODO: Check for interrupts
   if (interrupt.requested) {
@@ -161,9 +189,9 @@ const step = () => {
 };
 
 const reset = () => {
-  pc = (mmu.read(0xFFFC) << 8) | mmu.read(0xFFFD);
-  sp = 0xFD;
-  flags = 0x24;
+  registers.pc = (mmu.read(0xFFFC) << 8) | mmu.read(0xFFFD);
+  registers.sp = 0xFD;
+  registers.flags = 0x24;
 };
 
 export { step, reset, requestInterrupt };
