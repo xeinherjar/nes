@@ -22,9 +22,6 @@ import ppu from './ppu';
 const ramBuffer = new ArrayBuffer(0xFFFF + 1);
 const ram = new Uint8Array(ramBuffer);
 
-const vramBuffer = new ArrayBuffer(0x3FFF + 1);
-const vram = new Uint8Array(vramBuffer);
-
 
 const read = (address) => {
   /* Mirror of lower byte range */
@@ -33,7 +30,7 @@ const read = (address) => {
   } else if (address < 0x3FFF) {
     /* Mirror of 0x2000 - 0x2007 */
     /* Memory mapped to PPU */
-    return ppu.readRegister(0x2000 + (address & 0x7));
+    return ppu.read(0x2000 + (address & 0x7));
   } else {
     /* Everything else */
     return ram[address];
@@ -47,7 +44,7 @@ const write = (address, value) => {
   } else if (address < 0x3FFF) {
     /* Mirror of 0x2000 - 0x2007 */
     /* Memory mapped to PPU */
-    ppu.writeRegister(0x2000 + (address & 0x7), (value & 0xFF));
+    ppu.write(0x2000 + (address & 0x7), (value & 0xFF));
   } else {
     /* Everything else */
     ram[address] = (value & 0xFF);
@@ -71,7 +68,6 @@ const loadRom = (header, data) => {
           ram[0xC000 + i] = data[i];
         }
       }
-
       break;
     default:
       console.log('Mapper not yet supported');
@@ -81,4 +77,5 @@ const loadRom = (header, data) => {
 };
 
 
-export { loadRom, read, write };
+
+export default { loadRom, read, write, ram };

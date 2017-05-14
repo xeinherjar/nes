@@ -1,11 +1,17 @@
 import rom from './rom';
-import { loadRom } from './mmu';
-import * as cpu from './cpu';
+import mmu from './mmu';
+import cpu from './cpu';
+import ppu from './ppu';
 
 console.log('Powered up');
 rom.load().then((romData) => {
-  console.log('romData', romData);
-  loadRom(romData.header, romData.data);
+  mmu.loadRom(romData.header, romData.prg);
   cpu.reset();
-  cpu.step();
+  for (let i = 0; i < 10000000; i++) {
+    cpu.step();
+    ppu.step();
+    ppu.step();
+    ppu.step();
+  }
+  console.log('done');
 });

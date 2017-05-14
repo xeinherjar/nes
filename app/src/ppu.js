@@ -12,230 +12,312 @@
  * 0x3F00 - 0x3F1F       0x0020              Palette RAM indexes [not RGB values]
  * 0x3F20 - 0x3FFF       0x00E0              Mirrors 0x3F00 - 0x3F1F
  * ***************************************************************************/
+// TODO: Scrolling, https://wiki.nesdev.com/w/index.php/PPU_scrolling
 
-(function() {
+import mmu from './mmu';
 
-  'use strict';
+/* MEMORY */
+const vramBuffer = new ArrayBuffer(0x3FFF);
+const vram = new Uint8Array(vramBuffer);
 
-  var ppu = {};
-  ppu.cycles = 0;
-  ppu.dots = 0;
-  ppu.scanlines = 0;
+const oamramBuffer = new ArrayBuffer(0xFF);
+const oamram = new Uint8Array(oamramBuffer);
 
-  // use .v for read/write through 0x2007
-  ppu.v = 0; // VRAM address      15 bits
-  ppu.t = 0; // VRAM temp address 15 bits
-  ppu.x = 0; // Fine x scroll      3 bits
-  ppu.w = 0; // write toggle       1 bit
+/* Counters */
+let cycle = 0;
+let scanline = -1; // 341 cycle
+let frame = 0; // 262 scanlines
+let oddFrame = false;
+let renderingEnabled = false;
 
-  var mBuffer = new ArrayBuffer(0x3FFF + 1);
-  ppu.vram  = new Uint8Array(mBuffer);
+/* REGISTERS & READERS/WRITERS */
+let registers = { };
+// use .v for read/write through 0x2007
+registers.v = 0; // VRAM address      15 bits
+registers.t = 0; // VRAM temp address 15 bits
+registers.x = 0; // Fine x scroll      3 bits
+registers.w = 0; // write toggle       1 bit
 
-  ppu.read = function(address) {
+let tiles =   [0x0000, 0x0000]; // 16-bit, bitmap data for two tiles
+let palette = [0x00, 0x00]; // 8-bit palette attribtues
+let sprites = []; // 8-bit, 64 items, ie 8 sprites, secondary oam
 
-  };
+/* PALLET */
+const palletTable = [
+  "rgb(124, 124, 124)", "rgb(  0,   0, 252)", "rgb(  0,   0, 188)",
+  "rgb( 68,  40, 188)", "rgb(148,   0, 132)", "rgb(168,   0,  32)",
+  "rgb(168,  16,   0)", "rgb(136,  20,   0)", "rgb( 80,  48,   0)",
+  "rgb(  0, 120,   0)", "rgb(  0, 104,   0)", "rgb(  0,  88,   0)",
+  "rgb(  0,  64,  88)", "rgb(  0,   0,   0)", "rgb(  0,   0,   0)",
+  "rgb(  0,   0,   0)", "rgb(188, 188, 188)", "rgb(  0, 120, 248)",
+  "rgb(  0,  88, 248)", "rgb(104,  68, 252)", "rgb(216,   0, 204)",
+  "rgb(228,   0,  88)", "rgb(248,  56,   0)", "rgb(228,  92,  16)",
+  "rgb(172, 124,   0)", "rgb(  0, 184,   0)", "rgb(  0, 168,   0)",
+  "rgb(  0, 168,  68)", "rgb(  0, 136, 136)", "rgb(  0,   0,   0)",
+  "rgb(  0,   0,   0)", "rgb(  0,   0,   0)", "rgb(248, 248, 248)",
+  "rgb( 60, 188, 252)", "rgb(104, 136, 252)", "rgb(152, 120, 248)",
+  "rgb(248, 120, 248)", "rgb(248,  88, 152)", "rgb(248, 120,  88)",
+  "rgb(252, 160,  68)", "rgb(248, 184,   0)", "rgb(184, 248,  24)",
+  "rgb( 88, 216,  84)", "rgb( 88, 248, 152)", "rgb(  0, 232, 216)",
+  "rgb(120, 120, 120)", "rgb(  0,   0,   0)", "rgb(  0,   0,   0)",
+  "rgb(252, 252, 252)", "rgb(164, 228, 252)", "rgb(184, 184, 248)",
+  "rgb(216, 184, 248)", "rgb(248, 184, 248)", "rgb(248, 164, 192)",
+  "rgb(240, 208, 176)", "rgb(252, 224, 168)", "rgb(248, 216, 120)",
+  "rgb(216, 248, 120)", "rgb(184, 248, 184)", "rgb(184, 248, 216)",
+  "rgb(  0, 252, 252)", "rgb(248, 216, 248)", "rgb(  0,   0,   0)",
+  "rgb(  0,   0,   0)"
+];
 
-  ppu.write = function(address, value) {
 
-  };
 
-  // Called from mmu.js
-  ppu.readRegister = function(regAddress) {
-    switch (regAddress) {
-     case 0x2002:
-        // PPUSCROLL and PPUADDR latch is cleared when reading
-        ppu.w = 0;
-        return ppu.status;
-      case 0x2004:
-        return ppu.oamdata[ppu.oamaddr];
-      case 0x2007:
-        return ppu.vram[ppu.v];
-      default:
-        console.log('Error, not a readable register', regAddress.toString(16));
+/* PPUCTRL 0x2000 write
+ * Bit 7 6 5 4 3 2 1 0
+ *     V P H B S I N N
+ *     V: nmi enable:                   0 = false,  1 = true
+ *     P: master/slave
+ *     H: sprite size:                  0 = 8x8,    1 = 16x16,
+ *     B: bg pattern table address:     0 = 0x0000, 1 = 0x1000
+ *     S: sprite pattern table address: 0 = 0x0000, 1 = 0x1000
+ *     I: vram address increment:       0 = inc 1,  1 = inc 32
+ *
+ *     NN: nametable select
+ *     N1: Add 240 to the Y scroll position
+ *     N0: Add 256 to the X scroll position
+ * */
+let ctrl = {
+  // NN
+  // 0 = 0x2000 1 = 0x2400
+  // 2 = 0x2800 3 = 0x2c00
+  V: 0, P: 0, H: 0, B: 0, S: 0, I: 0, NN: 0
+};
+let ctrlValue = 0;
+const writeCtrl = (value) => {
+  ctrlValue = value;
+  ctrl.V  = (value >> 7) & 1;
+  ctrl.P  = (value >> 6) & 1;
+  ctrl.H  = (value >> 5) & 1;
+  ctrl.B  = (value >> 4) & 1;
+  ctrl.S  = (value >> 3) & 1;
+  ctrl.I  = (value >> 2) & 1;
+  ctrl.NN = value & 3;
+  // t: ...BA.. ........ = d: ......BA
+  //    1110011 11111111 = 0x73FF
+  registers.t = (registers.t & 0x73FF) | (ctrl.NN << 10);
+};
+
+/* PPUMASK 0x2001 write
+ * Bit 7 6 5 4 3 2 1 0
+ *     B G R s b M m g
+ *     B: emp blue, G: emp green
+ *     R: emp red , s: show sprites
+ *     b: show bg ,
+ *     M: show sprites in leftmost 8px of screen
+ *     m: show bg in leftmost 8px of screen
+ *     g: grayscale
+ * */
+let maskValue = 0;
+let mask = {
+  B: 0, G: 0, R: 0, s: 0, b: 0, M: 0, m: 0, g: 0
+};
+const writeMask = (value) => {
+  maskValue = value;
+  mask.B  = (value >> 7) & 1;
+  mask.G  = (value >> 6) & 1;
+  mask.R  = (value >> 5) & 1;
+  mask.s  = (value >> 4) & 1;
+  mask.b  = (value >> 3) & 1;
+  mask.M  = (value >> 2) & 1;
+  mask.m  = (value >> 1) & 1;
+  mask.g  = value & 1;
+};
+
+/* PPUSTATUS 0x2002 read
+ * Bit 7 6 5 4 3 2 1 0
+ *     V S O . . . . .
+ *     V: vertical blank has started
+ *     S: sprite 0 hit
+ *     O: sprite overflow
+ *
+ *     TODO: Reading clears Bit7
+ * */
+let statusValue = 0;
+let ppustatus = {
+  V: 0, S: 0, O: 0
+};
+
+/* OAMADDR 0x2003 write
+ *
+ *
+ * */
+let oamaddr = 0;
+const writeOamaddr = (value) => {
+  oamaddr = value;
+};
+
+/* OAMDATA 0x2004 read and write
+ * OAM Data is 256 bytes of memory
+ *
+ *
+ * */
+const writeOamdata = (value) => {
+  oamram[oamaddr] = value;
+  oamaddr++;
+};
+
+/* PPUSCROLL 0x2005 write x2
+ *
+ * */
+const writeScroll = (value) => {
+  if (registers.w === 0) {
+    // t: ....... ...HGFED = d: HGFED...
+    //    1111111 11100000 = 7fe0
+    registers.t = (registers.t & 0x7fe0) | (value >> 3);
+    // x:              CBA = d: .....CBA
+    //                          11111000 = 0x7
+    registers.x = value & 0x07;
+    registers.w = 1;
+  } else {
+    // t: CBA..HG FED..... = d: HGFEDCBA
+    //    0001100 00011111 = 0xc1f
+    //    0001100 = c
+    //    00011111 = 1f
+    const CBA = registers.t >> 12;
+    const HG  = (registers.t >> 2) & 0xC0;
+    const FED = (registers.t & 0x1f) << 3;
+    registers.t = HG | FED | CBA;
+    registers.w = 0;
+  }
+};
+
+
+/* PPUADDR 0x2006 write x2
+ * Valid address range, 0x0000 - 0x3FFF
+ * */
+const writeAddr = (value) => {
+  value = value & 0x3FFF;
+  if (registers.w === 0) {
+    registers.w = 1;
+    registers.v = (value << 8) | (registers.v & 0xFF);
+  } else {
+    registers.v = (value & 0xFF00) | value;
+    registers.w = 0;
+  }
+};
+
+/* PPUDATA 0x2007 read/write
+ *
+ * */
+const writeData = (value) => {
+  vram[registers.v] = value;
+};
+
+/* OAM DMA 0x4014 write
+ *
+ * */
+const oamdma = (address) => {
+  console.log('oamdma');
+  const from = address << 8;
+  const to   = (address << 8) | 0xFF;
+  for (let i = 0; i < 0xFF; i++) {
+    oamram[i] = mmu.ram[from + i];
+  }
+  // TODO: cpu ticks, module importing being weird...
+  // notes say it uses 2004 to write, should I increment
+  // oamaddr as well?
+  // const cycles = cpu.cycles % 2 === 1 ? 514 : 513;
+  // cpu.cycles += cycles;
+
+};
+
+
+/* Read & Write from MMU */
+const read = (address) => {
+  switch (address) {
+    case 0x2002:
+      // PPUSCROLL and PPUADDR latch is cleared when reading
+      registers.w = 0;
+      return statusValue;
+    case 0x2004:
+      return oamram[oamaddr];
+    case 0x2007:
+      const value = vram[registers.v];
+      const change = ctrl.I === 0 ? 1 : 32;
+      registers.v += change;
+      // TODO: review post fetch notes
+      // look into buffered reads
+      return value;
+    default:
+      console.log('Error, not a readable register', address.toString(16));
+  }
+};
+
+const write = (address, value) => {
+  switch (address) {
+    case 0x2000:
+      writeCtrl(value);
+      break;
+    case 0x2001:
+      writeMask(value);
+      break;
+    case 0x2003:
+      writeOamaddr(value);
+      break;
+    case 0x2004:
+      writeOamdata(value);
+      break;
+    case 0x2005: // x2
+      writeScroll(value);
+      break;
+    case 0x2006: // x2
+      writeAddr(value);
+      break;
+    case 0x2007:
+      writeData(value);
+      const change = ctrl.I === 0 ? 1 : 32;
+      registers.v += change;
+      break;
+    case 0x4014:
+      oamdma(value);
+      break;
+    default:
+      console.log('Error, not a writeable register', address.toString(16));
+  }
+
+};
+
+const step = () => {
+  if (scanline === -1) { // scanline -1 and 261
+    // if oddFrame, then 1 less cycle
+    // if cycle 280 - 304 and renderenable, reload vertical scroll bits
+
+  } else if (scanline <= 239) { // scanline 0 - 239 Visable scanlines
+    if (cycle === 0) {
+
+    } else if (cycle <= 256) { // cycle   1 - 256
+
+    } else if (cycle <= 320) { // cycle 257 - 320
+
+    } else if (cycle <= 336) { // cycle 321 - 336
+
+    } else if (cycle <= 340) { // cycle 337 - 340
+
     }
-  };
 
-  ppu.writeRegister = function(regAddress, value) {
-    console.log('ppu write', regAddress.toString(16), value);
-    switch (regAddress) {
-      case 0x2000:
-        ppu.writeCtrl(value);
-        break;
-      case 0x2001:
-        ppu.writeMask(value);
-        break;
-      case 0x2003:
-        ppu.writeOamaddr(value);
-        break;
-      case 0x2004:
-        ppu.writeOamdata(value);
-        break;
-      case 0x2005: // x2
-        ppu.writeScroll(value);
-        break;
-      case 0x2006: // x2
-        ppu.writeAddr(value);
-        break;
-      case 0x2007:
-        ppu.writeData(value);
-        break;
-      default:
-        console.log('Error, not a writeable register', regAddress.toString(16));
-      }
-  };
+  } else if (scanline === 240) { // scanline 240
+    // PPU is idle
+    return;
+  } else if (scanline === 241) { // scanline 241
 
-  /* HELPERS */
-  var getBit = function(regsiter, bit) {
-    return (register >> bit) & 1;
-  };
+  } else if (scanline <= 260) { // scanline 242 - 260
 
-  var setBit = function(register, bit) {
-    bit = 1 << bit;
-    register &= ~bit;
-  };
-
-  var clearBit = function(register, bit) {
-    bit = 1 << bit;
-    register |= bit;
-  };
-
-  /* REGISTERS */
-  ppu.reg = {};
-
-  /* PPUCTRL 0x2000 write
-   * Bit 7 6 5 4 3 2 1 0
-   *     V P H B S I N N
-   *     V: nmi enable,     P: master/slave
-   *     H: gb tile select, B: sprite tile select
-   *     S: increment mode, I: nametable select
-   *
-   *     NN: nametable select
-   *     N1: Add 240 to the Y scroll position
-   *     N0: Add 256 to the X scroll position
-   * */
-  ppu.reg.ctrl = {
-    // NN
-    // 0 = 0x2000 1 = 0x2400
-    // 2 = 0x2800 3 = 0x2c00
-    V: 0, P: 0, H: 0, B: 0, S: 0, I: 0, NN: 0
-  };
-  ppu.writeCtrl = function(value) {
-    ppu.reg.ctrl.V  = (value >> 7) & 1;
-    ppu.reg.ctrl.P  = (value >> 6) & 1;
-    ppu.reg.ctrl.H  = (value >> 5) & 1;
-    ppu.reg.ctrl.B  = (value >> 4) & 1;
-    ppu.reg.ctrl.S  = (value >> 3) & 1;
-    ppu.reg.ctrl.I  = (value >> 2) & 1;
-    ppu.reg.ctrl.NN = value & 3;
-    // t: ...BA.. ........ = d: ......BA
-    //    1110011 11111111 = 0x73FF
-    ppu.t = (ppu.t & 0x73FF) | (nn << 10);
-  };
-
-  /* PPUMASK 0x2001 write
-   * Bit 7 6 5 4 3 2 1 0
-   *     B G R s b M m g
-   *     B: emp blue, G: emp green
-   *     R: emp red , s: show sprites
-   *     b: show bg ,
-   *     M: show sprites in leftmost 8px of screen
-   *     m: show bg in leftmost 8px of screen
-   *     g: grayscale
-   * */
-  ppu.mask = 0;
-  ppu.reg.mask = {
-    B: 0, G: 0, R: 0, s: 0, b: 0, M: 0, m: 0, g: 0
-  };
-  ppu.writeMask = function(value) {
-    ppu.mask = value;
-    ppu.reg.mask.B  = (value >> 7) & 1;
-    ppu.reg.mask.G  = (value >> 6) & 1;
-    ppu.reg.mask.R  = (value >> 5) & 1;
-    ppu.reg.mask.s  = (value >> 4) & 1;
-    ppu.reg.mask.b  = (value >> 3) & 1;
-    ppu.reg.mask.M  = (value >> 2) & 1;
-    ppu.reg.mask.m  = (value >> 1) & 1;
-    ppu.reg.mask.g  = value & 1;
-  };
-
-  /* PPUSTATUS 0x2002 read
-   * Bit 7 6 5 4 3 2 1 0
-   *     V S O . . . . .
-   *     V: vertical blank has started
-   *     S: sprite 0 hit
-   *     O: sprite overflow
-   *
-   *     TODO: Reading clears Bit7
-   * */
-  ppu.status = 0;
-  ppu.reg.status = {
-    V: 0, S: 0, O: 0
-  };
-
-  /* OAMADDR 0x2003 write
-   *
-   *
-   * */
-  ppu.oamaddr = 0;
-  ppu.writeOamaddr = function(value) {
-    ppu.oamaddr = value;
-  };
-
-  /* OAMDATA 0x2004 read and write
-   * OAM Data is 256 bytes of memory
-   *
-   *
-   * */
-  var oBuffer = new ArrayBuffer(0xFF);
-  ppu.oamdata = new Uint8Array(oBuffer);
-  ppu.writeOamdata = function(value) {
-    ppu.oamdata[ppu.oamaddr] = value;
-    ppu.oamaddr++;
-  };
-
-  /* PPUSCROLL 0x2005 write
-   *
-   * */
-  ppu.writeScroll = function(value) {
-    if (ppu.w === 0) {
-      // t: ....... ...HGFED = d: HGFED...
-      //    1111111 11100000 = 7fe0
-      ppu.t = (ppu.t & 0x7fe0) | (value >> 3);
-      // x:              CBA = d: .....CBA
-      //                          11111000 = 0x7
-      ppu.x = value & 0x07;
-      ppu.w = 1;
-    } else {
-      // t: CBA..HG FED..... = d: HGFEDCBA
-      //    0001100 00011111 = 0xc1f
-      //    0001100 = c
-      //    00011111 = 1f
-      //    TODO:
-      ppu.w = 0;
-    }
-  };
-
-  // 0x2006
-  ppu.writeAddr = function(value) {
-    if (ppu.w === 0) {
-      ppu.w = 1;
-      ppu.v = (value << 8) | (ppu.v & 0xFF);
-    } else {
-      ppu.v = (value & 0xFF00) | value;
-      ppu.w = 0;
-    }
-
-  };
-
-  // 0x2007
-  ppu.writeData = function(value) {
-    ppu.vram[ppu.v] = value;
-  };
-
-  ppu.oamdma = 0;   // 0x4014
+  } else { // badthings, bail! should never happen
+    console.log('if you see me, something is wrong');
+  }
 
 
+  if (cycle >= 341) { cycle = 0; scanline += 1; }
+  if (scanline >= 262) { scanline = -1; oddFrame = !oddFrame; }
 
-  window.nes = window.nes || {};
-  window.nes.ppu = ppu;
-}());
+};
+
+export default { read, write, step };
