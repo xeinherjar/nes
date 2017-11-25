@@ -17,23 +17,28 @@
  * 0xFFFE - 0xFFFF      2  Address of Break (BRK instruction) handler routine
  * ***************************************************************************/
 
-import ppu from './ppu';
+//import ppu from './ppu';
+let ppu = null;
+let ramBuffer = new ArrayBuffer(0xFFFF + 1);
+let ram = new Uint8Array(ramBuffer);
 
-const ramBuffer = new ArrayBuffer(0xFFFF + 1);
-const ram = new Uint8Array(ramBuffer);
-
+const reset = (bus) => {
+  ppu = bus.ppu;
+}
 
 const read = (address) => {
   /* Mirror of lower byte range */
   if (address < 0x2000) {
     return ram[address & 0x07FF];
-  } else if (address < 0x3FFF) {
+  } else if (address <= 0x3FFF) {
     /* Mirror of 0x2000 - 0x2007 */
     /* Memory mapped to PPU */
+    console.log('ppu read, ', (address & 0x7));
     return ppu.read(0x2000 + (address & 0x7));
   } else {
     /* Everything else */
-    return ram[address];
+    //return ram[address];
+    return mapperRead(address);
   }
 };
 
@@ -41,18 +46,22 @@ const write = (address, value) => {
   /* Mirror of lower byte range */
   if (address < 0x2000) {
     ram[address & 0x07FF] = (value & 0xFF);
-  } else if (address < 0x3FFF) {
+  } else if (address <= 0x3FFF) {
     /* Mirror of 0x2000 - 0x2007 */
     /* Memory mapped to PPU */
+    console.log('ppu write, ', (address & 0x7), (value & 0xFF));
     ppu.write(0x2000 + (address & 0x7), (value & 0xFF));
   } else {
     /* Everything else */
-    ram[address] = (value & 0xFF);
+    mapperWrite(address, value);
   }
 };
 
+// TODO: Move mapping stuff out into their own files
+let mapperRead = () => { throw new Error('Mapper read not implemneted'); };
+let mapperWrite = () => { throw new Error('Mapper write not implemneted'); };
 
-const loadRom = (header, data) => {
+const loadRom = (header, data, chr) => {
   /* 0x8000 - 0xFFFF */
   var mapper = header.mapper;
   /* Mapper 0 */
@@ -62,20 +71,29 @@ const loadRom = (header, data) => {
       for (let i = 0; i < data.length; i++) {
         ram[0x8000 + i] = data[i];
       }
-      if (data.length < 0x8000) {
-        console.log("Mapper 0: Mirroring");
-        for (let i = 0; i < data.length; i++) {
-          ram[0xC000 + i] = data[i];
-        }
+      // Mapper 0 Mirrors if only one PRG bank.
+      if (data.length <= 0x4000) {
+        mapperRead = (address) => {
+          return ram[address & 0xBFFF];
+        };
+        mapperWrite = (address, value) => {
+          ram[address & 0xBFFF] = (value & 0xFF);
+        };
+      } else {
+        mapperRead = (address) => {
+          return ram[address];
+        };
+        mapperWrite = (address, value) => {
+          ram[address] = (value & 0xFF);
+        };
       }
       break;
     default:
       console.log('Mapper not yet supported');
-
   }
 
 };
 
 
 
-export default { loadRom, read, write, ram };
+export default { reset, loadRom, read, write, ram };

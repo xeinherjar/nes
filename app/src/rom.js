@@ -3,7 +3,7 @@ let rom = { };
 rom.load = () => {
   return new Promise( (resolve, reject) => {
     let xhr = new XMLHttpRequest();
-    xhr.open('GET', 'roms/IceHockey.nes', true);
+    xhr.open('GET', 'roms/DonkeyKong.nes', true);
     xhr.responseType = 'arraybuffer';
     xhr.onload = (e) => {
       const buffer = xhr.response;

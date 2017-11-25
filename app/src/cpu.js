@@ -1,11 +1,12 @@
-import mmu from './mmu';
+//import mmu from './mmu';
+let mmu = null;
 
 // REGISTERS
 let registers = { };
 let opCode = null;
 
 // Program Counter is 16 bits wide
-registers.pc = (mmu.read(0xFFFC) << 8) | mmu.read(0xFFFD);
+registers.pc = 0;
 
 /* Stack Pointer
  * Least significant byte of address starting at offset 0x100
@@ -31,10 +32,11 @@ registers.flags = 0;
 const C = 0, Z = 1, I = 2, D = 3,
       B = 4,        V = 6, S = 7;
 
-let interrupt = { requested: false, type: '' };
+let interrupt = { requested: false, type: null };
 
 /* COUNTERS */
 let cycles = 0;
+let cycles_ran = 0;
 
 /* Memory Access */
 const read = (address) => {
@@ -1023,30 +1025,32 @@ const TYA = () => {
 
 
 
-const reset = () => {
-  registers.pc = (mmu.read(0xFFFC) << 8) | mmu.read(0xFFFD);
+const reset = (bus) => {
+  mmu = bus.mmu;
+  registers.pc = (mmu.read(0xFFFD) << 8) | mmu.read(0xFFFC);
   registers.sp = 0xFD;
   registers.flags = 0x24;
 };
 
 
-// let stepCount = 1;
+let stepCount = 1;
 /* EXECUTE */
 const step = () => {
+  cycles = 0;
   // Perform interrupt request before instructions
-  // TODO: Check for interrupts
+  // If I is set then only NMI happens, ignore IRQ?
   if (interrupt.requested) {
     // NMI, IRQ, RESET
-    interrupt.request = false;
+    if (interrupt.type === 'NMI') { NMI(); interrupt.requested = false; }
+    // Check if interrupt ignore flag (SEI) is set
+    else if (interrupt.type === 'IRQ' && !I) { IRQ(); interrupt.requested = false; }
   }
 
   opCode = mmu.read(registers.pc);
-
-  //console.log('pc', registers.pc);
   /*
   console.log(stepCount + ': ' +
       registers.pc.toString(16) +
-      ' OP: ' + registers.op.toString(16) +
+      ' OP: ' + opCode.toString(16) +
       ' A: ' + registers.accumulator.toString(16) +
       ' X: ' + registers.regX.toString(16) +
       ' Y: ' + registers.regY.toString(16) +
@@ -1364,8 +1368,11 @@ const step = () => {
     case 0xFE:
       cycles += 7; INC(absoluteX()); break;
     default:
+      console.log('ugh oh', mmu.read(0x02), mmu.read(0x03));
       console.log('UKN OP: ' + '0x' + opCode.toString(16));
       console.log('Bytes : ' + OP_BYTES[opCode]);
+      console.log('Registers: ', registers);
+      console.log('Cycles: ', cycles);
       throw new Error('UKN OP!');
   }
 

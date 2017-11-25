@@ -14,14 +14,28 @@
  * ***************************************************************************/
 // TODO: Scrolling, https://wiki.nesdev.com/w/index.php/PPU_scrolling
 
-import mmu from './mmu';
+let mmu = null;
+let cpu = null;
+
+const reset = (bus) => {
+  mmu = bus.mmu;
+  cpu = bus.cpu;
+  const chr = bus.rom.chr;
+
+  for (let i = 0; i < chr.length; i++) {
+    vram[i] = chr[i];
+  }
+};
+
+/* SCREEN */
+let screenBuffer = new ArrayBuffer(256 * 240);
+let screen = new Uint8Array(screenBuffer);
+const canvas = document.getElementById('nes-canvas').getContext('2d');
 
 /* MEMORY */
-const vramBuffer = new ArrayBuffer(0x3FFF);
+const vramBuffer = new ArrayBuffer(0x3FFF + 1);
 const vram = new Uint8Array(vramBuffer);
 
-const oamramBuffer = new ArrayBuffer(0xFF);
-const oamram = new Uint8Array(oamramBuffer);
 
 /* Counters */
 let cycle = 0;
@@ -29,6 +43,7 @@ let scanline = -1; // 341 cycle
 let frame = 0; // 262 scanlines
 let oddFrame = false;
 let renderingEnabled = false;
+let previousNmi = 0;  // For use with ppustatus.V or ctrl.V
 
 /* REGISTERS & READERS/WRITERS */
 let registers = { };
@@ -38,9 +53,29 @@ registers.t = 0; // VRAM temp address 15 bits
 registers.x = 0; // Fine x scroll      3 bits
 registers.w = 0; // write toggle       1 bit
 
-let tiles =   [0x0000, 0x0000]; // 16-bit, bitmap data for two tiles
-let palette = [0x00, 0x00]; // 8-bit palette attribtues
-let sprites = []; // 8-bit, 64 items, ie 8 sprites, secondary oam
+// Background
+// 0 = high bits, 1 = low bits
+let nameTableByte = 0;
+// 16-bit, bitmap data for two tiles
+let lowTile = 0;
+let highTile = 0;
+// 0 - high attribute bits, 1 - low attribute bits (same tile)
+let attributeByte = 0;
+let palette = [0x00, 0x00]; // 8-bit palette attribtues (shift-registers)
+
+// TODO: sprite registers...
+// Sprites
+// 64 sprites for frame
+// 4 Bytes per sprite
+// 0 - y position of top of sprite, 1 - tile index number
+// 2 - attribute,                   3 - x position of left side of sprite
+const oamramBuffer = new ArrayBuffer(0xFF + 1);
+const oamram = new Uint8Array(oamramBuffer);
+let secondaryOam = [] // 8 sprites for current scanline
+let spriteShiftRegister = []; // 8 pairs of shift registers
+let spriteAttributes = [] // 8 attribute bytes
+let spriteLatches = [] // 8 x positions
+
 
 /* PALLET */
 const palletTable = [
@@ -67,6 +102,17 @@ const palletTable = [
   "rgb(  0, 252, 252)", "rgb(248, 216, 248)", "rgb(  0,   0,   0)",
   "rgb(  0,   0,   0)"
 ];
+/* Pallet vram memory map
+ * 0x3F00 - Universal background color
+ * 0x3F01 - 0x3F03 - BG pallete 0
+ * 0x3F03 - 0x3F07 - BG pallete 1
+ * 0x3F09 - 0x3F0B - BG pallete 2
+ * 0x3F0D - 0x3F0F - BG pallete 3
+ * 0x3F11 - 0x3F13 - Sprite pallete 0
+ * 0x3F15 - 0x3F17 - Sprite pallete 1
+ * 0x3F19 - 0x3F1B - Sprite pallete 2
+ * 0x3F1D - 0x3F1F - Sprite pallete 3
+ * */
 
 
 
@@ -80,7 +126,7 @@ const palletTable = [
  *     S: sprite pattern table address: 0 = 0x0000, 1 = 0x1000
  *     I: vram address increment:       0 = inc 1,  1 = inc 32
  *
- *     NN: nametable select
+ *     NN: nametable select (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
  *     N1: Add 240 to the Y scroll position
  *     N0: Add 256 to the X scroll position
  * */
@@ -90,9 +136,7 @@ let ctrl = {
   // 2 = 0x2800 3 = 0x2c00
   V: 0, P: 0, H: 0, B: 0, S: 0, I: 0, NN: 0
 };
-let ctrlValue = 0;
 const writeCtrl = (value) => {
-  ctrlValue = value;
   ctrl.V  = (value >> 7) & 1;
   ctrl.P  = (value >> 6) & 1;
   ctrl.H  = (value >> 5) & 1;
@@ -115,12 +159,10 @@ const writeCtrl = (value) => {
  *     m: show bg in leftmost 8px of screen
  *     g: grayscale
  * */
-let maskValue = 0;
 let mask = {
   B: 0, G: 0, R: 0, s: 0, b: 0, M: 0, m: 0, g: 0
 };
 const writeMask = (value) => {
-  maskValue = value;
   mask.B  = (value >> 7) & 1;
   mask.G  = (value >> 6) & 1;
   mask.R  = (value >> 5) & 1;
@@ -138,9 +180,7 @@ const writeMask = (value) => {
  *     S: sprite 0 hit
  *     O: sprite overflow
  *
- *     TODO: Reading clears Bit7
  * */
-let statusValue = 0;
 let ppustatus = {
   V: 0, S: 0, O: 0
 };
@@ -196,10 +236,17 @@ const writeScroll = (value) => {
 const writeAddr = (value) => {
   value = value & 0x3FFF;
   if (registers.w === 0) {
+    // t: .FEDCBA ........ = d: ..FEDCBA
+    //    1000000 11111111 = 0x40FF
+    // t: X...... ........ = 0
+    //    0111111 11111111 = 0x3FFF
+    registers.t = (registers.t & 0x40FF) | (value << 8);
+    registers.t = registers.t & 0x3FFF;
     registers.w = 1;
-    registers.v = (value << 8) | (registers.v & 0xFF);
   } else {
-    registers.v = (value & 0xFF00) | value;
+    // t: ....... HGFEDCBA = d: HGFEDCBA
+    registers.t = (value & 0xFF00) | value;
+    registers.v = registers.t;
     registers.w = 0;
   }
 };
@@ -208,14 +255,40 @@ const writeAddr = (value) => {
  *
  * */
 const writeData = (value) => {
-  vram[registers.v] = value;
+  let address = registers.v;
+  if (registers.v < 0x3F00) {
+    address = registers.v & 0x2FFF;
+  }
+  else {
+    address = registers.v & 0x3F1F;
+  }
+
+  vram[address] = value;
+  const change = ctrl.I === 0 ? 1 : 32;
+  registers.v += change;
 };
+
+const readVram = () => {
+  if (registers.v < 0x3F00) {
+    const address = registers.v & 0x2FFF;
+    const change = ctrl.I === 0 ? 1 : 32;
+    registers.v += change;
+    return vram[address];
+  }
+  else {
+    const address = registers.v & 0x3F1F;
+    const change = ctrl.I === 0 ? 1 : 32;
+    registers.v += change;
+    return vram[address];
+  }
+};
+
 
 /* OAM DMA 0x4014 write
  *
  * */
 const oamdma = (address) => {
-  console.log('oamdma');
+  console.log('----oamdma-----, ugh, double check me');
   const from = address << 8;
   const to   = (address << 8) | 0xFF;
   for (let i = 0; i < 0xFF; i++) {
@@ -235,14 +308,20 @@ const read = (address) => {
   switch (address) {
     case 0x2002:
       // PPUSCROLL and PPUADDR latch is cleared when reading
+      const statusValue = (
+          (ppustatus.V << 7) |
+          (ppustatus.S << 6) |
+          (ppustatus.O << 5)
+        )
       registers.w = 0;
+      // Reading clears Bit7
+      ppustatus.V = 0;
+      console.log('read', '0x2002', statusValue);
       return statusValue;
     case 0x2004:
       return oamram[oamaddr];
     case 0x2007:
-      const value = vram[registers.v];
-      const change = ctrl.I === 0 ? 1 : 32;
-      registers.v += change;
+      const value = readVram();
       // TODO: review post fetch notes
       // look into buffered reads
       return value;
@@ -273,8 +352,6 @@ const write = (address, value) => {
       break;
     case 0x2007:
       writeData(value);
-      const change = ctrl.I === 0 ? 1 : 32;
-      registers.v += change;
       break;
     case 0x4014:
       oamdma(value);
@@ -285,39 +362,123 @@ const write = (address, value) => {
 
 };
 
-const step = () => {
-  if (scanline === -1) { // scanline -1 and 261
-    // if oddFrame, then 1 less cycle
-    // if cycle 280 - 304 and renderenable, reload vertical scroll bits
+// BG Rendering and Fetching
+const bgTile = () => {
+    // 1 - 2 get nametable byte ctrl.NN (base nametable address)
+    const ntAddr = 0x2000 | (registers.v & 0x0FFF);
+    nameTableByte = vram[ntAddr];
+    // 3 - 4 get attribute byte ctrl.B
+    const atAddr = 0x23C0 | (registers.v & 0x0C00) |
+                            ((registers.v >> 4) & 0x38) |
+                            ((registers.v >> 2) & 0x07);
+    // Get value and bump register.v
+    attributeByte = readVram(atAddr);
+    // 5 - 6 get low bg tile byte
+    lowTile = vram[nameTableByte]
+    // 7 - 8 get high bg tile byte (address + 8)
+    highTile = vram[nameTableByte + 8]
+};
 
-  } else if (scanline <= 239) { // scanline 0 - 239 Visable scanlines
-    if (cycle === 0) {
+const renderPixels = () => {
+  // screen 256(cycle) x 240(scanline)
+  if (cycle > 255) { console.log('cycle too high'); return; }
+  if (scanline > 240) { console.log('scanline too high'); return; }
+  const base = scanline * cycle;
+  // TODO: find pallet for index?
+  for (let i = 7; i >= 0; i--) {
+    const idx = ((lowTile >> i) & 1)  + (((highTile >> i) & 1) * 2);
+    screen[ base + i ] = idx;
+  };
 
-    } else if (cycle <= 256) { // cycle   1 - 256
-
-    } else if (cycle <= 320) { // cycle 257 - 320
-
-    } else if (cycle <= 336) { // cycle 321 - 336
-
-    } else if (cycle <= 340) { // cycle 337 - 340
-
-    }
-
-  } else if (scanline === 240) { // scanline 240
-    // PPU is idle
-    return;
-  } else if (scanline === 241) { // scanline 241
-
-  } else if (scanline <= 260) { // scanline 242 - 260
-
-  } else { // badthings, bail! should never happen
-    console.log('if you see me, something is wrong');
-  }
-
-
-  if (cycle >= 341) { cycle = 0; scanline += 1; }
-  if (scanline >= 262) { scanline = -1; oddFrame = !oddFrame; }
 
 };
 
-export default { read, write, step };
+
+// TODO: intertup, check if interupts disabled
+const step = () => {
+  if (scanline === -1) { // scanline -1 and 261
+    // TODO: if oddFrame, then 1 less cycle
+    // TODO: if cycle 280 - 304 and renderenable, reload vertical scroll bits
+    if (cycle == 1) {
+      // clear vblank flag
+      ppustatus.V = 0;
+      // TODO: sprite 0 collision?
+    }
+
+    if (cycle <= 248) { // cycle   1 - 256
+      bgTile();
+      cycle += 8;
+    } else if (cycle <= 256) { // cycle   249 - 256
+      // Unused tile fetch
+      cycle += 1;
+
+    } else if (cycle <= 279) { // cycle 257 - 279
+      // Mostly idle
+      // TODO: hovri(v) = hori(t) on 257?
+      cycle += 1;
+
+    } else if (cycle <= 304) { // cycle 280 - 304
+      // vert(v) = vert(t)
+      cycle += 1;
+    } else if (cycle <= 320) { // cycle 305 - 320
+      // Idle
+      cycle += 1;
+
+    } else if (cycle <= 336) { // cycle 321 - 336
+      bgTile();
+      cycle += 8;
+
+    } else if (cycle <= 340) { // cycle 337 - 340
+      // TODO: fetch nametable byte twice?  Garbage fetch?
+      cycle += 4;
+    }
+
+
+  } else if (scanline <= 239) { // scanline 0 - 239 Visable scanlines
+    if (cycle === 0) {
+      cycle += 1;
+      // PPU is idle
+    } else if (cycle <= 256) { // cycle   1 - 256
+      bgTile();
+      // Render pixel
+      //renderPixels();
+      cycle += 8;
+
+    } else if (cycle <= 320) { // cycle 257 - 320
+      // Mostly idle
+      // TODO: hovri(v) = hori(t) on 257?
+      cycle += 1;
+
+    } else if (cycle <= 336) { // cycle 321 - 336
+      // TODO: same as 1 - 256
+      cycle += 8;
+
+    } else if (cycle <= 340) { // cycle 337 - 340
+      // TODO: fetch nametable byte twice?  Maybe garbage fetch?
+      cycle += 4;
+    }
+
+  } else if (scanline === 240) { // scanline 240
+    cycle += 1;
+    // PPU is idle
+  } else if (scanline === 241) { // scanline 241
+    if (cycle === 1) {
+      // set vblank flag
+      ppustatus.V = 1;
+      if (ctrl.V) { cpu.requestInterrupt('NMI'); console.log('nmi'); }
+      console.log('-----Frame------', ctrl.V, ppustatus.V);
+    }
+    cycle += 1;
+
+  } else if (scanline <= 260) { // scanline 242 - 260
+    cycle += 1;
+  }
+
+  if (cycle >= 341) { cycle = 0; scanline += 1; }
+  if (scanline >= 261) { scanline = -1; oddFrame = !oddFrame; frame++ }
+
+};
+
+
+
+export default { reset, read, write, step, cycle, screen };
